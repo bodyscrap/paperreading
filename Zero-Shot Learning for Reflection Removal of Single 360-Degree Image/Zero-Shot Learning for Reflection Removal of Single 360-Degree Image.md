@@ -1,131 +1,141 @@
 # Zero-Shot Learning for Reflection Removal of Single 360-Degree Image
 
 # Abstract
-The existing methods for reflection removal mainly focus on removing blurry and weak reflection artifacts and thus often fail to work with severe and strong reflection artifacts.  
-However, in many cases, real reflection artifacts are sharp and intensive enough such that even humans cannot completely distinguish between the transmitted and reflected scenes.  
-In this paper, we attempt to remove such challenging reflection artifacts using 360-degree images.  
-We adopt the zero-shot learning scheme to avoid the burden of collecting paired data for supervised learning and the domain gap between different datasets.  
-We first search for the reference image of the reflected scene in a 360-degree image based on the reflection geometry, which is then used to guide the network to restore the faithful colors of the reflection image.  
-We collect 30 test 360-degree images exhibiting challenging reflection artifacts and demonstrate that the proposed method outperforms the existing state-of-the-art methods
-on 360-degree images.
+従来の反射除去の手法は主にぼやけた弱い反射アーチファクトを除去することに重点を置いており、深刻で強い反射アーチファクトに対処できないことがよくある。  
+しかし多くの場合、実際の反射現象は、人間でさえ透過シーンと反射シーンを完全に区別できないほど、鋭く激しい。  
+本論文では360度画像を用いて、このような困難な反射アーチファクト除去を試みる。  
+教師あり学習のためのペアデータ収集の負担や、異なるデータセット間のdomeain gapを回避するため、zero-shot learning方式を採用する。  
+まず、反射の形状に基づいて360度画像から反射シーンの参照画像を探索し、それを用いて反射画像の忠実な色を復元するようにネットワークを誘導する。  
+我々は、困難な反射アーチファクトが現れている30枚の360度テスト画像を収集し、提案手法が360度画像において既存の最先端手法を凌駕することを実証する。
 
 # 1 Introduction
-We often take pictures through the glass, for example, take a picture of the glass showcase in a museum or a gallery.  
-The captured images through the glass exhibit undesired artifacts of the reflected scene.  
-Such reflection artifacts decrease the visibility of the transmitted scene behind the glass and thus degrade the performance of diverse computer vision techniques.  
-For a few decades, attempts have been made to develop efficient reflection removal methods.  
-Whereas many existing methods of reflection removal used multiple glass images taken under constrained environments, the recent learning-based methods achieve outstanding performance by exploiting deep features to separate an input single glass image into transmission and reflection images.
-While the existing methods usually assume blurry reflection artifacts associated with the out-of-focus scenes in front of the glass, the actual reflection artifacts exhibit more diverse characteristics than their assumption and often become intensive and sharp.  
-Therefore, even the state-of-the-art learning-based methods still suffer from the domain gap between the training and test datasets.
-In particular, 360-degree cameras, widely used for VR applications, do not focus on a specific object and usually generate the images with sharp reflection artifacts on the glass region as shown in Fig. 1(a). Figs. 1(b) and (c) show the cropped images of the glass region and the reference region of the actual reflected scene, respectively, where we see that the reflected scene distinctly emerges in the glass image.  
-As shown in Figs. 1(d) and (e), the existing learning-based methods [16, 30] fail to remove such artifacts from the glass image, since the reflection characteristics of 360-degree images are different from that of ordinary images.
-In such a case, it is more challenging to distinguish which scene is transmitted or reflected in the glass image by even humans. However, we can employ the visual information of the reflected scene within a 360-degree image as a reference to guide the reflection removal effectively.  
+美術館やギャラリーのガラスショーケースを撮影するなど、ガラス越しの撮影はよくあります。  
+ガラス越しに撮影された画像には、反射したシーンの望ましくないアーチファクトが現れます。  
+このような映り込みは、ガラス越しの透過シーンの視認性を低下させ、多様なコンピュータビジョン技術の性能を低下させます。  
+数十年前から、効率的な反射除去方法を開発する試みがなされてきた。  
+既存の反射除去手法の多くは、制約のある環境下で撮影された複数のガラス画像を用いていたが、近年の学習ベースの手法は、入力された単一のガラス画像を透過画像と反射画像に分離する深層学習特徴量を利用することで優れた性能を達成している。
+既存の手法はガラス前面のピンぼけシーンに関連するぼやけた反射アーチファクトを想定していますが、実際の反射アーチファクトは想定よりも多様な特性を示し、しばしば集約的でシャープになります。  
+ゆえに、satate-of-the-artな学習ベースの手法であっても学習と実践の間のgapに苦しんでいる。  
+特にVR用途に広く用いられている360度カメラは、特定の物体に焦点を合わせないため、Fig 1（a）に示すように、通常、ガラス領域上にくっきりした映り込みがある画像が生成されます。  
+Fig 1（b）、（c）は、それぞれガラス領域と実際の反射シーンの参照領域を切り出した画像で、ガラス画像に反射シーンがはっきりと浮かび上がっていることが分かります。  
+Fig 1 (d), (e) に示すように、360度画像の反射特性は通常の画像とは異なるため、既存の学習ベースの手法[16, 30]ではガラス画像からこのような映り込みを除去することができません。  
+この場合、ガラス画像内のどのシーンが透過・反射しているかを人間でさえ区別することはとても困難になっています。  
+しかし、360度画像内の反射シーンの視覚情報を参考にすることで、反射除去を効果的に誘導することができます。  
 
 ![Fig1](images/Fig1.png)  
 
-The only existing reflection removal method [9] for 360-degree images uses a glass image synthesis algorithm for supervised learning, and thus theoretically suffers from the domain gap between the training and test datasets.  
-Moreover, it rarely concerns the cooperation between the two tasks of reflection removal for 360-degree images: image restoration and reference image matching.  
-In this paper, we apply a zero-shot learning framework for reflection removal of 360-degree images that avoids the burden of collecting training datasets and the domain gap between different datasets.  
-Also, the proposed method iteratively estimates the optimal solutions for both the image restoration and the reference matching by alternatively updating the results for a given test image.
-We first assume that a 360-degree image is captured by a vertically standing camera in front of the glass plane, and the central region of the 360-degree image is considered as the glass region.  
-Then we investigate the reference information matching to the restored reflection image in a 360-degree image and update the network parameters to recover the transmission and reflection images based on the matched reference information.  
-Consequently, the proposed method provides an outstanding performance to eliminate the reflection artifacts in 360-degree images, as shown in Fig. 1(f).
-The main contributions of this work are summarized as follows.
-1. To the best of our knowledge, this is the first work to apply a zero-shot learning framework to address the reflection removal problem for a single 360-degree image that avoids the domain gap between different datasets observed in the existing supervised learning methods.
-2. The proposed method refines the reference matching by using the reflection geometry on a 360-degree image while adaptively restoring the transmission and reflection images with the guidance of refined references.
-3. We collect 30 real test 360-degree images for experiments and demonstrate the proposed method outperforms the state-of-the-art reflection removal techniques.
+360度画像に対する既存の唯一の反射除去法[9]は、教師あり学習のためのガラス画像を合成するアルゴリズムを用いるため、理論的には学習データとテストデータセットの間の領域ギャップに悩まされることになる。  
+加えて、360度画像に対する反射除去の2つのタスクである画像復元と参照画像照合との連携に関係する部分はほとんどない。  
+本論文では360度画像の反射除去のために、学習データセットを収集する負担の回避および、異なるデータセット間の領域ギャップを回避するzero-shot learningの枠組みを適用する。  
+また、提案手法は、与えられたテスト画像に対する結果を交互に更新することで、画像復元と参照画像マッチングの両方の最適解を反復的に推定する。
+まず、ガラス面の前に垂直に立てたカメラで360度画像を撮影し、360度画像の中心領域をガラス領域と見なすとする。  
+そして、360度画像中の復元された反射画像との参照情報のマッチングを調べ、マッチングした参照情報に基づいてネットワークパラメータを更新し、透過画像と反射画像を復元します。  
+その結果提案手法は、Fig 1(f)に示すように、360度画像における映り込みを除去する優れた性能を発揮します。  
+本研究の主な貢献は、以下のようにまとめられます。
+
+1. 我々の知る限り本論文は単一の360度画像に対する反射除去問題に対してゼロショット学習の枠組みを適用した最初の研究であり、既存の教師あり学習手法でみられる異なるデータセット間の領域ギャップを回避している。
+2. 提案手法は、360度画像上の反射形状を利用して参照マッチングを洗練し、洗練された参照を手掛かりに透過画像と反射画像を適応的に復元する。 
+3. 実験のために30枚のテスト用の実360度画像を収集し、提案手法が最先端の反射除去技術を凌駕することを実証する。
 
 # 2 Related Works
-In this section, we briefly summarize the existing reflection removal methods.   
-We classify the exiting methods into unsupervised and supervised approaches.  
-The unsupervised approach includes the computational reflection removal methods and the latest zero-shot learning-based image decomposition method that does not need paired datasets for training.  
-In contrast, the supervised approach covers the learning-based single image reflection removal methods.
-**Unsupervised approach:** The distinct properties of the reflection artifacts appear in the multiple images taken in the particular capturing environments. [5, 13, 21] removed reflection artifacts in the multiple polarized images according to the unique property of the reflected lights whose intensities are changed by the polarization angles.  
-[20] separated multiple glass images captured as varying focal lengths into two component images to have distinct blurriness. [7, 8, 17, 24, 29] analyzed different behaviors of the transmitted and reflected scenes across multiple glass images taken at different camera positions.  
-Furthermore, [19] detected the repeated movement of the transmitted scene in a video.  
-[23] extracted the static image reflected on the front windshield of a car in a blackbox video.  
-On the other hand, removing the reflection artifacts from a single glass image is challenging due to the lack of characteristics to distinguish between the transmission and reflection images.  
-[14] selected reflection edges to be removed on a glass image by user assistance.  
-[18] separated the input image into a sharp layer and a blurry layer to obtain the transmission and reflection images under the strong assumption that the reflection images are more blurry than the transmission images.  
-[15] supposed a glass image causes a large number of the cross-points between two different edges, and separated the glass image into two layers that minimize the total number of the cross-points.  
-In addition, [22] removed spatially repeated visual structures because the lights reflected on the front and back surfaces of the glass window yield the ghosting effects.  
-[6] proposed a general framework that trains a network to decompose the multiple glass images captured in a constrained environment where the transmitted and reflected scenes are dynamic and static, respectively.  
-While the existing methods require multiple glass images or assume distinct characteristics of the reflection artifacts, the proposed method removes the challenging reflection artifacts exhibiting similar features to the transmission image by detecting reference information in a single 360-degree image.  
-**Supervised approach:** Deep learning-based reflection removal methods have been proposed in recent years.  
-They train the deep networks by using the paired dataset of the glass and transmission images, and provide more reliable results than the computational methods that strongly assume the unique characteristic of reflection artifacts.  
-[4] firstly applied CNN for reflection removal and proposed a framework that two networks are serially connected to restore the gradients and colors of the transmission image, respectively.  
-[25] revised the framework to predict the colors and gradients of the transmission image simultaneously.  
-[30] proposed a novel framework that predicts a transmission image and a reflection image recursively by using the prior result.  
-Similarly, [16] adopted a complete cascade framework that repeats to predict the transmission and reflection images from the glass image by feeding back the prior results of transmission and reflection restoration.  
-[2] tackled locally intensive reflection artifacts by predicting a probability map indicating local regions of dominant reflection artifacts.
-On the other hand, some methods have tackled the training data issues for supervised learning.  
-[27] defined a novel loss term to train the network parameters regardless of the misalignment between an input glass image and its ground-truth transmission image that is frequently observed in the existing real training datasets.  
-Due to the lack of paired data of real glass and transmission images, [32] modeled a sophisticated image formulation to synthesize glass images, involving the light absorption effect depending on the incident angle of rays on the glass plane.  
-[12] generated synthetic glass images by using a graphical simulator to imitate the reflection physically.  
-[28] utilized the deep networks for reflection removal as well as the glass image synthesis to make more realistic glass images for training.  
-Recently, [9] removed the reflection artifacts using a reference image captured in the opposite direction to the glass window in a panoramic image.
+本節では，既存の反射除去手法について簡単にまとめる．  
+既存の手法を教師なしアプローチと教師ありアプローチに分類する。  
+教師なしアプローチには、計算による反射除去法と、学習のためのペアデータセットを必要としない最新のゼロショット学習ベースの画像分解法が含まれる。  
+一方、教師ありアプローチには学習ベースの単一画像反射除去法が含まれる。
 
-However, all the supervised learning-based methods suffer from the domain gap.  
-[1] demonstrated that the reflection removal performance of the existing methods is determined by the types of reflection artifacts in their training dataset.  
-However, the proposed method adaptively works for a given input image based on a zero-shot learning framework, and also alleviates the burden of collecting training datasets in the supervised learning framework.
+**Unsupervised approach:**  
+このような反射光アーチファクトは，特定の撮影環境下で撮影された複数の画像に現れる．  
+[5, 13, 21]は，偏光角によって強度が変化する反射光の特性を利用し，複数の偏光画像の反射アーチファクトを除去している．  
+また[20]では，焦点距離の異なる複数のガラス画像を2枚の画像に分離し，ボケ度を明確にしている．  
+また，[7, 8, 17, 24, 29]は，カメラ位置を変えて撮影した複数のガラス画像について，透過シーンと反射シーンの異なる挙動を解析している．  
+さらに、[19]は映像中の透過場面の繰り返し移動を検出している。  
+また，[23]はブラックボックス映像から自動車のフロントガラスに映る静止画を抽出した．  
+一方1枚のガラス画像から映り込みを除去することは、透過画像と反射画像を区別するための特性がないため困難である。  
+[14]はユーザ支援により，ガラス画像上で除去すべき反射エッジを選択した．  
+[18]は反射画像は透過画像よりも不鮮明であるという強い仮定のもと、入力画像を鮮明な層と不鮮明な層に分離し、透過画像と反射画像を取得した。  
+また[15]では，ガラス画像は異なる2つのエッジ間の交差点が多くなると仮定し，交差点の総数が最小になるようにガラス画像を2つのレイヤーに分離している．  
+[22]はガラス窓の表裏で反射した光がゴースト効果をもたらすため、空間的に繰り返される視覚構造を除去している。  
+[6]は、透過シーンと反射シーンがそれぞれ動的と静的であるという制約のある環境下で撮影された複数のガラス画像を分解するネットワークを学習させる一般的なフレームワークを提案した。  
+既存の手法では、複数のガラス画像を必要としたり、反射物の明確な特徴を想定したりしますが、提案手法では、単一の360度画像から参照情報を検出することにより、透過画像と同様の特徴を示す難しい反射物の除去を行います。  
+
+**Supervised approach:**  
+近年ディープラーニングを用いた反射除去法が提案されています。  
+これらは，ガラス画像と透過画像のペアデータセットを用いてディープネットワークを学習させ，反射物特有の特性を強く仮定した計算機上での手法よりも信頼性の高い結果を提供する．  
+[4]は反射除去に初めてCNNを適用し，2つのネットワークを直列に接続して，透過画像のグラデーションと色をそれぞれ復元する枠組みを提案した。  
+[25]は透過画像の色と階調を同時に予測するフレームワークを修正した．  
+また、[30]は、過去の結果を用いて再帰的に透過画像と反射画像を予測する新たなフレームワークを提案した。  
+同様に[16]はガラス画像から透過画像と反射画像を予測するために、透過と反射の復元結果を事前にフィードバックして繰り返す完全カスケード型のフレームワークを採用した。  
+[2]は映り込みが支配的な局所領域を示す確率マップを予測することで、局所的に集中する反射アーチファクトに対処した。  
+一方，教師あり学習の学習データの問題に取り組んだ手法もある．  
+[27]は、既存の学習データセットで頻繁に観測される、入力ガラス画像とその真正透過画像との間の不整合に関係なく、ネットワークパラメータを学習するための新しい損失項を定義している。  
+実画像においてガラス画像と透過画像のペアデータがないため、[32]はガラス面への光線入射角度に依存する光吸収効果を含むガラス画像を合成するための高度な画像定式化をモデル化した。  
+また，[12]は，グラフィカルシミュレータを用いて物理的に反射を模倣し，合成ガラス画像を生成している。  
+また，[28]では，ガラス画像合成と同時に反射除去のためのディープネットワークを利用し，よりリアルなガラス画像を作成し，学習用に利用した．  
+最近、[9]はパノラマ画像のガラス窓と反対方向に撮影した参照画像を用いて、反射アーチファクトを除去しています。
+しかし、教師あり学習ベースの手法はすべてドメインギャップに悩まされている。  
+[1]では既存手法の反射除去性能は、その学習データセットに含まれる反射アーチファクトの種類によって決定されることを示した。  
+一方、提案手法はゼロショット学習の枠組みに基づき、与えられた入力画像に対して適応的に動作し、教師あり学習の枠組みにおける学習データセットの収集の負担を軽減することができる。
 
 ![Fig2](images/Fig2.png)  
-Fig. 2: Image alignment using optical flow estimators. (a) A pair of the rectified glass and reference images on a 360-degree image.  
-The flow maps and the warped reference images are obtained by (b) DICL [26] and (c) FlowNet [3], respectively.
+Fig 2：オプティカルフロー推定器を用いた画像アライメント  
+(a) 360度画像上の正面ガラス画像と参照画像のペア  
+フローマップはと歪んだ参照画像はそれぞれ(b)DICL[26]よって、(c)FlowNet[3]によって得られたものである。
 
 # 3 Methodology
-Since the 360-degree image includes the whole environmental scene around the camera, the glass scene and the associated reflected scene are captured together.  
-The proposed method recovers the transmission and reflection images associated with the glass region in a 360-degree image by bringing relevant information from the reference region including the reflected scene.  
-In this section, we first explain how to search for the reference image based on the reflection geometry in a 360-degree image.  
-Then we introduce the proposed zero-shot learning framework with a brief comparison to the existing method of DDIP [6].  
-We finally describe the detailed training process of the proposed method in a test time.
+360度画像はカメラの周囲の環境シーン全体を含むため、ガラスのシーンと関連する反射シーンが一緒に撮影されます。  
+提案手法では、反射シーンを含む参照領域から関連する情報を持ってくることで、360度画像中のガラス領域に関連する透過画像と反射画像を復元する。  
+本章では、まず360度画像中の反射形状に基づく参照画像の探索方法について説明します。  
+次に、提案するゼロショット学習の枠組みを、既存手法であるDDIP[6]と簡単な比較を交えて紹介する。  
+最後に提案手法のテスト時における詳細な学習過程を説明する。
 
 ## 3.1 Estimation of Reference Image
-We investigate the relationship between the reflection image and the associated reference image.  
-As introduced in [9], the reflection image suffers from the photometric and geometric distortions that make it challenging to distinguish the reflected scene from the transmitted scene on the glass image even using the reference image.  
-The photometric distortion can be generated by external factors like the thickness of glass, the incident angle of light, and the wavelength of light.  
-The image signal processing (ISP) embedded in the camera is also an internal factor of photometric distortion.  
-The geometric distortion between the reflection and reference images is mainly caused by the parallax depending on the distances from the camera to the glass or the objects.  
-The recent techniques [3, 26] for optical flow estimation fail to estimate the correct correspondence between the glass image and the reference image due to the photometric distortion of the reflection image and the mixed transmission image, as shown in Fig. 2.
+我々は、反射画像と関連する参照画像との関係を調査している。  
+[9]で紹介したように、反射画像は測光歪みと幾何歪みに悩まされ、参照画像を用いてもガラス画像上の反射シーンと透過シーンを区別することが困難である。  
+幾何学的な歪みは、ガラスの厚み、光の入射角、光の波長などの外的要因によって発生することがある。  
+また、カメラに内蔵された画像信号処理（ISP）も、測光歪みの内部要因となっている。  
+反射像と参照像の間の幾何学的歪みは、カメラからガラスや物体までの距離に依存する視差が主な原因である。  
+最近のオプティカルフロー推定技術[3, 26]では、図2に示すように、反射画像と透過画像の混合による測光歪みのため、ガラス画像と参照画像の正しい対応関係を推定することができない。
 
 ![Fig3](images/Fig3.png)  
-Fig. 3: Configuration for 360-degree image acqusition with reflection.  
-Circles represent the surfaces of unit spheres where the 360-degree images are rendered.
+Fig 3：反射を利用した360度画像取得の構成。  
+丸は360度映像のレンダリングを行う単位球の表面を表す。  
 
-Reducing the geometric distortion and the photometric distortion can be considered as a chicken-and-egg problem.  
-The reference image well-aligned with the reflection image provides faithful colors for the restoration of reflected scene contents.  
-On the other hand, a well-recovered reflection image yields confident visual features to align the reference image with the reflection image.  
-The proposed method finds reliable reference regions for each pixel in the glass image area based on the reflection geometry.  
-A 360-degree image is captured by the rays projected from the objects in 3D space to the surface of a unit sphere.  
-In particular, the glass region produces additional rays reflected on the glass, and in such cases, we cannot estimate the accurate object locations in 3D space due to the absence of distance information.  
-As shown in Fig. 3, when an object is observed at xi in the glass region of a 360-degree image, it would be observed at ˆx if the glass does not exist.  
-According to the reflection geometry, we calculate the coordinates of the virtual points ˆxi and ˆo using the Householder matrix [10] defined by the orientation of the glass plane.  
-Assuming that the object should be located along the direction of di = ˆxi −ˆo, we consider candidate location of cki for xi by varying the distance to the object from the virtual origin ˆo along di.  
-Then we collect the matching candidates xki ’s by projecting the candidate locations cki ’s to the unit surface, respectively.  
-In this work, we define the search space including 50 candidate locations of cki ’s sampled along the direction of di to handle the background far from the glass.  
-Then we find the optimal matching point mi to xi among xki ’s of the search space that has the smallest feature difference from xi.  
-We consider the neighboring pixels to compute a patch-wise feature difference between xi and xki as
+幾何学的歪みと写真的歪みの低減は鶏と卵の問題と考えることができる。  
+反射画像とよく一致する参照画像は、反射されたシーンの内容を復元するための忠実な色を提供します。  
+一方、反射画像の復元がうまくいけば、参照画像と反射画像の位置関係を合わせるための確かな視覚的特徴を得ることができます。  
+提案手法は反射形状に基づき、ガラス画像領域内の各画素に対して信頼性の高い参照領域を求める。  
+360度画像は3次元空間の物体から単位球の表面に投影される光線によって撮影される。  
+特にガラス領域では、ガラスに反射した光線が追加で発生するため、そのような場合は距離情報がないため、3次元空間における正確な物体位置を推定することができない。  
+Fig 3に示すように、360度画像のガラス領域で$x_i$に物体が観測された場合、ガラスが存在しなければ(仮に実態であれば)$\hat{x}$に物体が観測されることになる。  
+反射形状に従い、ガラス面の向きで定義されるハウスホルダー行列[10]を用いて仮想点$\hat{x}_i$と$\hat{o}$の座標を算出する。  
+物体は$d_i = \hat{x}_i -\hat{o}$の方向に沿って位置すると仮定し、仮想原点$\hat{o}$から物体までの距離を$d_i$に沿って変化させ、$x_i$に対する$c^k_i$の位置候補を検討する。  
+そして、候補位置$c^{k'}_i$をそれぞれ単位面に投影してマッチング候補$x^{k'}_i$を集める。  
+本研究ではガラスから遠い背景を扱うために、$d_i$の方向に沿ってサンプリングされた50 個の$c^k_i$の候補位置を含む探索空間を定義する。  
+そして、探索空間の$x^{k'}_i$の中から、$x_i$との特徴量の差が最小となる$x_i$への最適なマッチング点$m_i$を求める。  
+近傍画素を考慮し、$x_i$と$x^k_i$のパッチワイズ特徴差を次のように計算する。
 
 $$
 \Omega(x_i, x_i^k) = \frac{1}{|\mathcal{N}_i| + 1}\sum_{p_j\in \mathcal{N_i} \cup \{p_i\}} \parallel F_G(p_j) - F_R(p_j^k)\parallel_1 \tag{1}
 $$
 
-where $F_G$ and FR represent the arbitrary rectified feature maps of the glass and reference regions in the 360-degree image, respectively, p denotes the pixel location corresponding to x on the rectified image domain, and Ni is the neighbor set of pi. In this work, we set the size of Ni to 24.  
-Specifically, for a given xi, we search for the two optimal matching points mci and mg i in terms of the color and gradient features, respectively.  
-The notation of the training iteration t is omitted for simplification. To search for the color-based matching point mci , we set FG as a reconstructed reflection image ˆR, and set FR as the rectified reference image Iref.  
-Note that ˆR and mci are iteratively updated for training, and more faithful ˆR provides more confident mci , and vice versa.  
-The gradient-based matching point mg i is obtained by using the gradient of the rectified glass image IG and Iref for FG and FR, respectively.  
-Note that mci and mg i provide partially complementary information for reflection recovery.  
-While mci prevents the recovered reflection image from having unfamiliar colors with the reference image, mg i makes the recovered reflection image preserve the structure of the glass image.
+ここで、$F_G$と$F_R$はそれぞれ360度画像中のガラス領域と参照領域の任意の平行化特徴マップを表し、$p$は平行化画像領域上の$x$に対応する画素位置を表し、$\mathcal{N}_i$は$p_i$の近傍集合を表している。  
+本研究では$\mathcal{N}_iの$大きさを$24$とする。  
+具体的には、与えられた$x_i$に対して、色と勾配の特徴量の観点からそれぞれ最適な2つのマッチング点$m^c_i$と$m^g_iを$探索する。  
+なお、学習反復回数$t$の表記は簡略化のため省略する。  
+色に基づくマッチング点 $m^c_i$ を探索するために、$F_G$ を再構成された反射画像 $\hat{R}$ とし、$F_R$ を平行化された参照画像 $I_{ref}$ とする。  
+$\hat{R}$と$m^c_i$は学習のために繰り返し更新され、より忠実な$\hat{R}$はより信頼性の高い$m^c_i$を提供し、逆もまた然りであることに注意されたい。  
+勾配ベースのマッチング点$m^g_i$は、$F_G$と$F_R$に対して、それぞれ平行化されたガラス画像$I_G$と$I_{ref}$の勾配を用いることで得られる。  
+$m^c_i$ と$m^g_i$ は反射像回復のために部分的に補完的な情報を提供することに注意されたい。  
+$m^c_i$は、復元された反射画像が参照画像と見慣れない色を持つことを防ぐ一方で、$m^g_i$は、復元された反射画像がガラス画像の構造を保持するようにする。
 
 ![Fig4](images/Fig4.png)  
-Fig. 4: The overall architecture of the proposed network.  
+Fig 4：提案するネットワークの全体構成。  
 
 ## 3.2 Network Architecture
-The proposed method is composed of the four sub-networks of encoder, decoder, and two generators, as shown in Fig. 4.  
-We share the network parameters of θ and φ for the recovery of the transmission and reflection images, respectively.  
-The encoder gets the rectified images from the 360-degree image and extracts the deep features that are able to reconstruct the input images by the decoder.  
-Since the deep features in the glass image have both of the transmission and reflection features, the generators provide the mask maps to separate the deep features of the glass image into the transmission feature hT and the reflection feature hR, respectively, given by
+提案手法は、Fig 4に示すように、encoder、decoder、2つのgeneratorの4つのサブネットワークから構成される。  
+透過画像と反射画像の復元でそれぞれネットワークパラメータ$\theta, \phi$を共有している。  
+encoderは360度画像から平行画像を取得し、decoderが入力画像を再構成できるdeep特徴量を抽出する。  
+ガラス画像のdeep特徴量は透過と反射の両方の特徴を持つため、generatorはガラス画像のdeep特徴量を透過特徴$h_T$と反射特徴$h_R$に分離するためのマスクマップを提供しそれぞれ次式で与えられる。
 
 $$
 \begin{align}
@@ -134,25 +144,24 @@ h_R = f_{\theta}(I_G)\cdot f_{\psi_R}(z_R), \tag{3}
 \end{align}
 $$
 
-where zT and zR represent the different Gaussian random noises and (·) denotes
-the element-wise multiplication.  
-However, the photometric distortion of the glass image provides incomplete reflection features to recover the original colors of the reflection image, and the proposed method applies the Adaptive Instance Normalization (AdaIN) [11] on the reflection feature to compensate for the incomplete information.  
-The reflection feature hR is transformed by the reference feature href as
+ここで、$z_T$ と $z_R$ は異なるガウスランダムノイズを表し、$(\cdot)$ は要素ごとの乗算を表す。  
+しかし、ガラス画像の光歪みにより反射画像の元の色を復元するための反射特徴が不完全なため、提案手法では反射特徴に適応的インスタンス正規化(AdaIN)［11］を適用し、不完全な情報を補う。  
+反射特徴量$h_R$は、参照特徴量$h_{ref}$によって以下のように変換される。  
 
 $$
 \hat{h}_R = \sigma(h_{ref})(\frac{h_R - \mu(h_R)}{\sigma(h_R)}) + \mu(h_{ref}), \tag{4}
 $$
 
-where href = fθ(Iref), and μ and σ denote the operations to compute the average and standard deviation across spatial dimensions.  
-The proposed method finally decodes the reflection image as ˆR = fφ( ˆhR).  
-Since AdaIN transfers the feature according to the statistics across spatial locations, it relieves the geometric difference between the reflection and reference images.  
-Unlike the reflection recovery, we suppose that the distortion of the transmission is negligible and predict the transmission image via ˆT = fφ(hT).  
-DDIP [6] introduced a general framework that is able to separate the multiple glass images into the transmission and reflection images.  
-It trains the network under a linear formulation for the glass image synthesis.  
-However, recent research [1, 9, 28] has addressed that such a naive formulation is insufficient to model the actual glass image.  
-On the other hand, the proposed method decomposes the glass image in a deep feature space and synthesizes the glass image by integrating the deep features of the transmission and reflection images instead of simply adding the resulting transmission and reflection color maps.  
-Also note that the proposed method attaches a new branch that brings the reference information from a given 360-degree image to distinguish the reflection image from the transmission image, while DDIP simply demands multiple glass images to involve distinct characteristics between the transmitted and reflected scenes.  
-Please refer to the supplementary material for network architecture details.
+ここで、$h_{ref} = f_{\theta}(I_{ref})$であり、$\mu$ と $\sigma$ は空間次元間の平均と標準偏差を計算するための演算を表す。  
+提案手法は最終的に反射画像を$\hat{R} = f_{\phi}(\hat{h}_R)$として復号する。  
+AdaINは空間位置をまたいだ統計量に従って特徴量を転送するため、反射画像と参照画像の幾何学的な差異を緩和することができる。  
+反射回復とは異なり、透過の歪みは無視できると仮定し、$\hat{T} = f_{\phi}(h_T)$ を介して透過画像を予測する。  
+DDIP[6]は、複数のガラス画像を透過画像と反射画像に分離できる一般的なフレームワークを導入しています。  
+これは、ガラス画像合成のための線形定式化の下でネットワークを学習させるものである。  
+しかし、最近の研究[1, 9, 28]では、このような素朴な定式化では実際のガラス画像をモデル化するには不十分であることが指摘されている。  
+一方提案手法は、ガラス画像をdeep特徴量空間に分解し、得られた透過・反射カラーマップを単純に足し合わせるのではなく、透過・反射画像のdeep特徴量を統合してガラス画像を合成するものである。  
+また、DDIPが単に複数のガラス画像を要求して透過シーンと反射シーンの特徴を区別するのに対し、提案手法は与えられた360度画像から反射画像と透過画像を区別するための参照情報をもたらす新しい枝を付加している点にも注目されます。  
+ネットワークアーキテクチャの詳細については、補足資料をご参照ください。
 
 # 3.3 Training Strategy
 he proposed method trains the network parameters in a test time for a given instance. Particularly, each network of the proposed framework is trained respectively according to different training losses.  
