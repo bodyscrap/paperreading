@@ -164,127 +164,145 @@ DDIP[6]は、複数のガラス画像を透過画像と反射画像に分離で�
 ネットワークアーキテクチャの詳細については、補足資料をご参照ください。
 
 # 3.3 Training Strategy
-he proposed method trains the network parameters in a test time for a given instance. Particularly, each network of the proposed framework is trained respectively according to different training losses.  
-For each iteration, the (θ, φ), ψR, and ψT are trained by using three individual Adam optimizers.  
-We update the network parameters during 600 iterations for each test image.  
-Encoder and decoder: The parameters of the encoder θ and the decoder φ are trained to reconstruct the input image itself according to the reconstruction loss Lrecon between a source map X and a target map Y defined as
+提案手法は与えられたインスタンスに対してテスト時にネットワークパラメータを学習する。  
+特に提案するフレームワークの各ネットワークは、異なる学習損失に従ってそれぞれ学習される。  
+各iterationにおいて、$(\theta, \phi)、\psi_R、\psi_T$は3つの個別のadam optimizerを用いて学習される。  
+各テスト画像について、600iterationsにネットワークパラメータを更新する。  
+
+**Encoderとdecoder:**  
+encoderのパラメータ$\theta$とdecoderのパラメータ$\phi$は、以下のように定義されるソースマップ$X$とターゲットマップ$Y$の間の再構成Loss $\mathcal{L}_{recon}$に従い、入力画像自体を再構成するように学習される。
 
 $$
 \mathcal{L}_{recon}(X, Y) = \mathcal{L}_{mse}(X, Y) + \omega_1 \mathcal{L}_mse(\nabla X, \nabla Y) \tag{5}
 $$
 
-where Lmse denotes the mean squared error and w1 denotes the weight to determine the contribution of the gradient difference for training.  
-We utilize the rectified images IG and Iref of the glass region and the reference region as training images.  
-The encoder extracts the deep features from IG and Iref and the decoder outputs the images ˆIG and ˆIref that minimize the auto-encoder loss LA defined as
+ここで、$\mathcal{L}_{mse}$は平均二乗誤差、$\omega_1$は学習用の勾配差の寄与度を決定するための重みを示す。  
+学習用画像として、ガラス領域と参照領域の平行化画像$I_G, I_{ref}$を利用する。  
+encoderは $I_G$ と $I_{ref}$ からdeep特徴量を抽出し、decoderは次式で定義されるオートエンコーダ損失 $\mathcal{L}_A$ を最小化する画像 $\hat{I}_G$ と $\hat{I}_{ref}$ を出力する。
 
 $$
-\mathcal{L}_A(\theta, \phi)=\mahtcal{L}_{recon}(\hat{I}_G, I_G) + \mathcal{L}_{recon}(\hat{I}_{ref}, I_{ref}) \tag{6}
+\mathcal{L}_A(\theta, \phi)=\mathcal{L}_{recon}(\hat{I}_G, I_G) + \mathcal{L}_{recon}(\hat{I}_{ref}, I_{ref}) \tag{6}
 $$
 
-In addition, it is helpful to reduce the training time to initialize θ and φ by using any photos.  
-For all the following experiments, we used θ and φ pre-trained on the natural images in [31] for one epoch.  
-Mask generator for transmission recovery: Though the network parameters θ, φ, and ψT are associated with the transmission recovery, ψT is only updated by the transmission loss.  
-The gradient prior that the transmission and reflection images rarely have intensive gradients at the same pixel location has been successfully used in reflection removal.  
-We enhance this prior for the two images not to have intensive gradients at similar locations.  
-The gradient prior loss Lgrad is defined as
+任意の画像を用いて$\theta$と$\phi$を初期化すると、学習時間の短縮に役立つ。  
+以下の実験ではすべて、[31]で示されている自然画像であらかじめ1エポック分学習させた$\theta$と$\phi$を用いた。  
+**Mask generator for transmission recovery(透過画像復元のためのマスク生成器):**  
+ネットワークパラメータ$\theta, \phi, \psi_T$は透過画像復元に関連するが、$\psi_T$は透過Lossによってのみ更新される。  
+透過画像と反射画像が同じ画素位置に集中的な勾配を持つことはほとんどないという勾配事前分布は、反射除去にうまく利用されている。  
+我々は、2つの画像が同じような位置に集中的な勾配を持たないように、この事前分布を拡張する。  
+勾配事前損失$\mathcal{L}_{grad}$は次のように定義される。
 
 $$
 \mathcal{\hat{T}\hat{R}} = \frac{1}{N}\displaystyle \sum_{p_j} |\nabla \hat{T}||\nabla \hat{R}^*(p_i)|, \tag{7}
 $$
 
-where N represents the total number of pixels and ∇ˆR∗(pi) denotes the gradient having the maximum magnitude around pi, i.e. ∇ˆR∗(pi) = maxpj∈Wi |∇ˆR(pj )| where Wi denotes the set of pixels within a local window centered at pi.  
-We empirically set the window size to 5. We also evaluate the additional reconstruction loss for the glass image by synthesizing a glass image using the recovered transmission and reflection images.  
-For glass image synthesis, the existing methds [31, 30, 16] manually modify the reflection image to imitate the photometric distortion of reflection and combine them according to the hand-crafted image formation models.  
-However, we obtain the distorted reflection image  ̄R by deactivating AdaIN of the proposed framework as  ̄R = fφ(fθ(IG) ·fψR(zR)) and synthesize the glass image by using the encoder and decoder as  ̃IG = fφ(fθ( ˆT) + fθ(  ̄R)). The transmission loss LT is defined as
+ここで、$N$は画素の総数、$\nabla \hat{R}^*(p_i)$は$p_i$周辺で最大の大きさを持つ勾配、すなわち$\nabla \hat{R}^*(p_i) = \max_{p_j \in \mathcal{W}_i}|\nabla \hat{R}(p_j)|$ここで$\mathcal{W_i}$は$p_i$を中心とするローカルウィンドウ内の画素集合を示している。  
+経験的に窓の大きさを$5$とした。また、復元された透過画像と反射画像を用いてガラス画像を合成することにより、ガラス画像の追加の再構成ロスを評価する。  
+ガラス画像合成の場合、既存の手法[31, 30, 16]では、反射画像を手動で修正し反射の光歪みを模倣して、手作業で作成した画像形成モデルに従って合成している。  
 
-
-$$
-\mathcal{L}_T(\psi_T) = \mathcal{L}_{recon}(\tilde{I}_G, I_G) + \omega_2 \mahtcal{L}_{grad}(\hat{T}, \hat{R}). \tag{8}
-$$
-
-**Mask generator for reflection recovery:**  
-While the transmission image is hypothetically estimated by applying the gradient prior, the reflection image has a reference color map R and a reference gradient map M obtained by the reference matching process, such that R(pi) = I(mci ) and M(pi) = ∇I(mg i ) where pi denotes the pixel location corresponding to xi in the rectified image.  
-The total reflection loss LR is given by
+一方、提案フレームワークはAdaINを無効化して歪んだ反射画像$\bar{R}$を$\bar{R} = f_\phi(f_\thetaθ(I_G) -f_{\psi_R}(z_R))$ として取得し、encoderとdecoderを用いてガラス画像を$\bar{I}_G = f_\phi(f_\theta(\hat{T}) + f_\theta(\bar{R}))$として合成する。  
+伝送損失$\mathcal{L}_T$は次のように定義される。
 
 $$
-\mathcal{L}_R(\psi_R) = \mathcal{L}_{recon}(\tilde{I}_G, I_G) + \omega_3\mahtcal{L}_{mse}(\hat{R}, R) + \omega_4\mathcal{L}_{mse}(\nabla \hat{R}, \mathcal{M}). \tag{9}
+\mathcal{L}_T(\psi_T) = \mathcal{L}_{recon}(\tilde{I}_G, I_G) + \omega_2 \mathcal{L}_{grad}(\hat{T}, \hat{R}). \tag{8}
+$$
+
+**Mask generator for reflection recovery(反射画像復元のためのマスク生成器):**  
+透過画像は勾配事前分布を適用し仮想的に推定されるが、反射画像は参照マッチング処理によって得られる参照カラーマップ$R$と参照勾配マップ$mathcal{M}$を持つ.  
+つまり、$R(p_i)=I(m^c_i), \mathcal{M}(p_i)=\nabla I(m^g_i)$である。  
+ここで$p_i$は平行面画像中の$x_i$に対応する画素位置を表している。  
+反射損失の全体$\mathcal{L}_R$は次式で与えられる。
+
+$$
+\mathcal{L}_R(\psi_R) = \mathcal{L}_{recon}(\tilde{I}_G, I_G) + \omega_3\mathcal{L}_{mse}(\hat{R}, R) + \omega_4\mathcal{L}_{mse}(\nabla \hat{R}, \mathcal{M}). \tag{9}
 $$
 
 # 4 Experimental Results
-This section provides the experimental results on ten 360-degree images to discuss the effectiveness of each part of the proposed method and compare the proposed method with the state-of-the-art methods qualitatively and quantitatively.  
-In this work, we set the weight of w1 for LA to 1 and the weights of w1,w2,w3, and w4 for LT and LR to 10, 3, 5, and 50, respectively.  
-Please see the supplementary results for more experimental results.
+本節では360度画像10枚に対する実験結果を示し，提案手法の各部の有効性を議論するとともに，提案手法と最先端手法の定性的・定量的な比較を行う．  
+なお、本実験では、$\mathcal{L}_A$の$\omega_1$の重みを$1$、$\mathcal{L}_T$と$\mathcal{L}_R$の$\omega_1,\omega_2,\omega_3,\omega_4$の重みをそれぞれ$10, 3, 5, 50$に設定した。  
+詳しい実験結果は補足結果をご覧ください。
 
 ![Fig5](images/Fig5.png)  
-Fig. 5: Effect of feature matching for reference searching. (a) Glass images and (b) reference images rectified from 360-degree images.  
-The reflection recovery results are obtained by the proposed methods using the (c) color-based matching, (d)
-gradient-based matching, and (e) both of them.
+Fig 5：参照検索における特徴量マッチングの効果。  
+(a) 360度画像から平行化したガラス画像と(b) 参照画像。  
+提案手法では、（c）カラーベースマッチング、（d）勾配ベースマッチング、（e）その両方を用いて反射復元結果を得ている。
 
 ## 4.1 Ablation Study
 **Feature matching for reference searching:**  
-The proposed method utilizes the color of the recovered reflection image and the gradient of the glass images to determine the matching points to bring the information to recover the reflection image.  
-We tested the comparative methods that utilize either of the color-based matching points or the gradient-based matching points to search for the reference images. 
-Fig. 5 shows the glass and reference images in the 360-degree images captured in front of the fish tanks of an aquarium. As shown in Figs. 5c and 5d, the method using only the color-based matching destroys the reflected scene structures, and the method using only the gradient-based matching fails to recover the original color of the reflection image faithfully.  
-However, when using both of the matching together, the proposed method recovers realistic colors while preserving the reflected scene structures.  
-Note that the rectified reference image and the recovered reflection image are misaligned due to the geometric distortion.
+提案手法は、復元された反射画像の色とガラス画像の勾配を利用して、反射画像を復元するための情報をもたらすマッチングポイントを決定している。  
+色に基づく照合点と勾配に基づく照合点のどちらかを利用して参照画像を探索する手法を比較検証した。 
+Fig 5は、水族館の水槽の前で撮影した360度画像におけるガラス画像と参照画像を示したものである。  
+Fig 5c、 Fig 5dに示すように、カラーベースマッチングのみを用いる方法では、反射したシーンの構造が破壊され、グラデーションベースマッチングのみを用いる方法では、反射画像の元の色を忠実に復元することができないことが分かります。  
+しかし、両者のマッチングを併用することで、反射画像の構造を保持したまま、現実的な色を復元することが可能となりました。  
+幾何学的な歪みにより、平行化された参照画像と復元された反射画像は位置がずれていることに注意してください。
 
 **Glass synthesis loss:**  
-Although the gradient prior provides a good insight for image decomposition, it may result in a homogeneous image where all pixels have small gradients.  
-We can alleviate this problem by using the glass synthesis loss Lrecon(  ̃IG,IG). Fig. 6 shows the effect of the glass synthesis loss.  
-The proposed method without Lrecon(  ̃IG,IG) provides the significantly blurred transmission images as shown in Fig. 6b where the mannequins behind the glass are disappeared from the recovered transmission image and the synthesized glass image.
+勾配事前分布は画像分解のための良い洞察を与えますが、全てのピクセルが小さな勾配を持つ均質な画像になってしまう可能性があります。  
+この問題は、ガラス合成Loss $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ を用いることで緩和することができる。  
+Fig 6にガラス合成Lossの効果を示す。  
+提案手法において $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ を用いない場合は、Fig 6bに示すように、透過画像と合成されたガラス画像からガラスの後ろのマネキンが消え、著しくぼやけた透過画像がえれられてしまう。  
+これに対し、提案手法にて $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ を用いた場合は、合成されたガラス画像に、反射画像で検出されない画像コンテキストを強制的に与えることで、透過シーンのコンテキストを保持することが可能です。
 
 ![Fig6](images/Fig6.png)  
-Fig. 6: Effect of the glass synthesis loss Lrecon(  ̃IG,IG). 
-(a) Glass and reference images rectified from 360-degree images. The triplets of the recovered transmission, reflection, and synthesized glass images obtained by the proposed method (b) without Lrecon(  ̃IG,IG) and (c) with Lrecon(  ̃IG,IG).
-
-![Fig7](images/Fig7.png)  
-Fig. 7: Effect of the gradient prior loss Lgrad( ˆT, ˆR). (a) Glass and reference images rectified from 360-degree images.  
-The pairs of the recovered transmission and reflection images obtained by the proposed method (b) without Lgrad( ˆT, ˆR) and (c) with Lgrad( ˆT, ˆR).
-
-In contrary, the proposed method using Lrecon(  ̃IG,IG) enforces the synthesized glass images to have the image context not detected in the reflection image, which preserves the context of the transmitted scene.
+**Fig. 6: ガラス合成loss $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ の効果**  
+(a) 360度画像から平行化したガラス画像と参照画像。  
+以下、復元透過画像、反射画像、合成したガラス画像を提案手法で作成した3枚組
+(b) $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ なし  
+(c) $\mathcal{L}_{recon}(\tilde{I}_G,I_G)$ あり
 
 **Gradient prior loss:**  
-The ablation study for the gradient prior loss Lgrad shows how it affects the resulting transmission images.  
-As shown in Fig. 7, whereas the method without the gradient prior loss often remains the sharp edges of the intensive reflection artifacts in the transmission images, the proposed method trained with Lgrad successfully suppresses such reflection edges.
+勾配事前loss $\mathcal{L}_{grad}$ のablation studyで、それが結果的に透過画像にどのような影響を与えるかを示す。  
+Fig 7に示すように、勾配事前lossを用いない手法では、透過画像に強い映り込みによる鋭いエッジが残ることが多いのに対し、提案手法にて $\mathcal{L}_{grad}$を用いて学習した場合では、そのような反射エッジをうまく抑制している。  
 
-![Fig8](images/Fig8.png)  
-Fig. 8: Qualitative comparison of the reflection removal performance. (a) Pairs of the glass and reference images in 360-degree images.  
-The results of the recovered transmission and reflection images obtained by (b) RS [18], (c) PRR [31], (d) BDN [30], (e) IBCLN [16], (f) PBTI [12], and (g) the proposed method.
+![Fig7](images/Fig7.png)  
+**Fig. 7: 勾配事前loss $\mathcal{L}_{grad}(\tilde{T}, \tilde{R})$ の効果**  
+(a) 360度画像から平行化したガラス画像と参照画像。  
+取得された透過画像と反射画像のペア  
+(b) $mathcal{L}_{grad}(\tilde{T}, \tilde{R})$ なし  
+(c) $mathcal{L}_{grad}(\tilde{T}, \tilde{R})$ あり  
 
 ## 4.2 Qualitative Comparison
-Since there are no existing methods of unsupervised reflection removal for a single 360-degree image, we compared the proposed method with the representative unsupervised method [18] and the state-of-the-art supervised methods [12, 16, 30, 31] that remove the reflection artifacts from a single glass image.  
-The rectified images of the glass regions in 360-degree images are given as input images for the existing methods.  
-Most of the reflection removal methods restore not only the transmission image but also the reflection image, and thus we evaluate the quality of the recovered transmission and reflection images together.  
-Fig. 8 shows the reflection removal results for three challenging glass images that make it hard for even humans to distinguish between the transmission and reflection images.  
-Due to the absence of the ground truth images, the rectified images of the misaligned reference regions in the 360-degree images are inferred to display the reflected scenes.  
-The unsupervised method RS [18] targets to remove blurred reflection artifacts and therefore rarely removed the reflection artifacts on the test glass images.  
-Also, the existing learning-based methods failed to detect the reflection artifacts because they are mainly trained by the synthesized glass images where the reflection images are manually blurred and attenuated except PBTI [12].  
-PBTI generates realistic glass images by using a graphic simulator, and suppressed the grey and homogeneous reflection artifacts from the sky as shown in the first image in Fig. 8, however, it failed to remove the colorful and structural reflection artifacts in the other glass images.  
-On the other hand, the proposed method successfully estimated the reflection images and suppressed the challenging reflection artifacts with the guidance of the reference regions estimated in the 360-degree images.
+単一の360度画像に対する教師なし反射除去の既存手法は存在しないため、提案手法を代表的な教師なし手法[18]および単一ガラス画像から反射アーチファクトを除去する最新の教師あり手法[12, 16, 30, 31]と比較した．  
+既存手法の入力画像として、360度画像中のガラス領域の平行化画像を与えた。  
+反射除去手法の多くは、透過画像だけでなく反射画像も復元するため、復元された透過画像と反射画像の品質を合わせて評価します。  
+Fig. 8は、人間でも透過像と反射像の区別が難しい3つのガラス画像に対する反射除去の結果を示しています。  
+
+![Fig8](images/Fig8.png)  
+Fig. 8: 反射除去性能の定性的比較  
+(a) 360度画像におけるガラス画像と参照画像のペア。  
+(b) RS [18], (c) PRR [31], (d) BDN [30], (e) IBCLN [16], (f) PBTI [12], (g) 提案手法を用いて得られた透過・反射画像復元結果です。
+
+正解画像がないため、360度画像中のずれた参照領域の平行化画像を推論して反射シーンを表示する。  
+教師なし手法RS[18]は、ぼやけた反射アーチファクトを除去することを目標としているため、テストガラス画像上の映り込みをほとんど除去することができなかった。  
+また，既存の学習ベースの手法は，PBTI[12]を除き，主に反射画像を手動でぼかし，減衰させた合成ガラス画像で学習するため，映り込みの検出に失敗している．  
+PBTIはグラフィックシミュレータを用いてリアルなガラス画像を生成し、Fig 8の最初の画像に示すように空からの灰色で均一な反射アーチファクトを抑制しましたが、他のガラス画像におけるカラフルで構造的な映り込みを除去することができませんでした。  
+一方提案手法は、360度画像から推定した参照領域を用いて、反射画像を推定し、困難な映り込みを抑制することに成功しました。
 
 ## 4.3 Quantitative Comparison
-We simply synthesize the glass images in 360-degree images without reflection artifacts.  
-In practice, we set the center area of a 360-degree image as the glass region and suppose an arbitrary depth of the region opposite to the glass region as a reflected scene.  
-Then we compose the transmission image in the glass region according to the conventional linear glass image formulation. 
-Table 1 quantitatively compare the performance of the reflection removal methods using 12 synthetic 360-degree images, where ‘-T’ and ‘-R’ denote the comparison for the transmission and reflection images, respectively.  
-We see that the proposed method ranks the first among the compared methods in terms of all the metrics except SSIM-T.  
-However, note that the input glass image itself, without any processing, yields the SSIM-T score of 0.666, even higher than that of the most methods.  
-It means that the quantitative measures are not sufficient to reflect the actual performance of the reflection removal, and the qualitative comparison on real test datasets is much more informative.
+360度画像の中で映り込みの無いガラス画像を単純に合成するのである。  
+実際には360度画像の中央部をガラス領域とし、ガラス領域と対向する領域の任意の深さを反射シーンとする。  
+そして、従来の線形ガラス画像定式化に従って、ガラス領域内の透過画像を合成する。 
+Table 1では、12枚の360°合成画像を用いて、反射除去手法の性能を定量的に比較しています。  
+提案手法はSSIM-Tを除く全ての指標において、比較した手法の中で1位であることが分かります。  
+しかし、何も処理をしていない入力ガラス画像そのものでは、SSIM-Tスコアが0.666となり、ほとんどの手法よりもずっと高い値を示していることに注意してください。  
+これは、反射除去の実際の性能を反映するには定量的な指標では不十分であり、実際のテストデータセットでの定性的な比較の方がはるかに有益であることを意味します。
 
 ![Table1](images/Table1.png)  
-Table 1: Comparison of the quantitative performance of reflection removal.  
+Table 1: 反射除去の定量的性能の比較  
 
 ![Fig9](images/Fig9.png)  
-Fig. 9: Layer separation results accroding to different angles of the glass plane orientation.
+Fig. 9: ガラス面の配向角度の違いによる層分離の結果  
 
 ## 4.4 Limitations
-The angular deviation of the glass plane orientation may cause large displacement of the matching candidates in 3D space, and thus degrade the performance of the proposed method.  
-Fig. 9 shows this limitation where the recovered transmission images remain lots of the reflection artifacts in the glass regions as the angular deviation of the glass plane orientation increases.  
-Moreover, since the proposed method highly depends on the quality of the reference image captured by the camera, it fails to remove the reflected camera contents itself and it often fails to recover the transmission and/or reflection images when the reference image is overexposed due to intense ambient light.
+ガラス面の向きの角度偏差は、マッチング候補の3次元空間での位置ずれを大きくし、提案手法の性能を低下させる可能性がある。  
+Fig 9はこの限界を示しており、ガラス面の向きの角度偏差が大きくなると、復元した透過画像にガラス領域での映り込みが多く残ってしまいます。  
+また、提案手法は、カメラで撮影された参照画像の品質に大きく依存するため、カメラで反射した内容物自体を除去できず、参照画像が強い外乱光によって露光過多になると、透過画像や反射画像の復元に失敗することが多くなります。
 
 # 5 Conclusion
-This paper proposes a novel reflection removal method for 360-degree images by applying the zero-shot learning scheme. Based on reflection geometry, the proposed method searches for reliable references from outside the grass region in the 360-degree image.  
-And then, it adaptively restores the truthful colors for the transmission and reflection images according to the searched references.  
-Experimental results demonstrate that the proposed method provides outstanding reflection removal results compared to the existing state-of-the-art methods for 360-degree images.  
+本論文ではZero-Shot Learningを適用した360度画像に対する新規な反射除去手法を提案した。  
+提案手法は、反射形状に基づき360度画像中のガラス領域の外側から信頼できる参照情報を探索する。  
+そして、探索された参照情報に従って、透過画像と反射画像の本物らしい色を適応的に復元する。  
+実験により提案手法は、360度画像に対して、既存のstate-of-the-artな手法と比較して、優れた反射除去結果を提供することが実証された。  
+
 **Acknowledgements**  
-This work was supported by the National Research Foundation of Korea within the Ministry of Science and ICT(MSIT) under Grant 2020R1A2B5B01002725, and by Institute of Information & communications Technology Planning & Evaluation(IITP) grant funded by the Korea government(MSIT(NO.2021-0-02068, Artificial Intelligence Innovation Hub) and o.2020-0-01336, Artificial Intelligence Graduate School Program(UNIST)).
+本研究は、科学情報通信部(MSIT)内の韓国国立研究財団(Grant 2020R1A2B5B01002725)、および韓国政府による情報通信技術企画評価院(IITP)助成金(MSIT(NO.2021-0-202068、人工知能イノベーションハブ)およびo.2020-0-01336、人工知能大学院プログラム(UNIST))の支援を受けて行われたものです。
