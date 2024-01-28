@@ -320,4 +320,257 @@ $$
 \eta^t &\leftarrow& arg \min_\eta \mathcal{L}(\theta, \eta) \tag{8}
 \end{align}
 $$
-Here t is the index of alternation and “←” means assigning.
+Here $t$ is the index of alternation and "$\leftarrow$" means assigning.
+
+**Solving for $\theta$** 
+One can use SGD to solve the sub-problem (7). 
+The stop-gradient operation is a natural consequence, because the gradient does not back-propagate to $\eta^{t-1}$ which is a constant in this subproblem.
+
+**Solving for $\eta$** 
+The sub-problem (8) can be solved independently for each $\eta_x$. 
+Now the problem is to minimize: $E_\Tau\left[ \|F_{θ^t}(\Tau(x)) − \eta_x‖^2_2 \right]$ for each image $x$, noting that the expectation is over the distribution of augmentation $\Tau$. 
+Due to the mean squared error,(*5) it is easy to solve it by:
+
+$$
+\eta^t_x \leftarrow E_\Tau\left[ \mathcal{F}_{\theta^t}(\Tau(x))\right] \tag{9}
+$$
+
+(*5) If we use the cosine similarity, we can approximately solve it by $l_2$-
+normalizing $\mathcal{F}$’s output and $\eta_x$.
+
+This indicates that $\eta_x$ is assigned with the average representation of $x$ over the distribution of augmentation.
+
+**One-step alternation** 
+SimSiam can be approximated by one-step alternation between (7) and (8). 
+First, we approximate (9) by sampling the augmentation only once, denoted as $\Tau'$, and ignoring $ET[\cdot]$.
+
+$$
+\eta^t_x \leftarrow \mathcal{F}_{\theta^t}(\Tau'(x)) \tag{10}
+$$
+
+Inserting it into the sub-problem (7), we have:
+
+$$
+\theta^{t+1} \leftarrow \min_\theta E_{x, \Tau}\left[ \|\mathcal{F}_\theta(\Tau(x))\| - \mathcal{F}_{\theta^t}(\Tau'(x))\|^2_2\right] \tag{11}
+$$
+
+Now $\theta^t$ is a constant in this sub-problem, and $\Tau′$ implies another view due to its random nature. 
+This formulation exhibits the Siamese architecture. 
+Second, if we implement (11) by reducing the loss with one SGD step, then we can approach the SimSiam algorithm: a Siamese network naturally with stop-gradient applied.
+
+**Predictor** 
+Our above analysis does not involve the predictor $h$. 
+We further assume that $h$ is helpful in our method because of the approximation due to (10).
+By definition, the predictor $h$ is expected to minimize: $E_z\left[\|h(z_1) -z_2\|^2_2\right]$.
+The optimal solution to h should satisfy: $h(z_1)=E_z[z_2]=E_\Tau[f(\Tau(x))]$ for any image $x$. 
+This term is similar to the one in (9). 
+In our approximation in (10), the expectation $ET[\cdot]$ is ignored. 
+The usage of $h$ may fill this gap. 
+In practice, it would be unrealistic to actually compute the expectation $E_\Tau$. 
+But it may be possible for a neural network (e.g., the preditor $h$) to learn to predict the expectation, while the sampling of $\Tau$ is implicitly distributed across multiple epochs.
+
+**Symmetrization** 
+Our hypothesis does not involve symmetrization. 
+Symmetrization is like denser sampling $\Tau$ in (11). 
+Actually, the SGD optimizer computes the empirical expectation of $E_{x,\Tau}[\cdot]$ by sampling a batch of images and one pair of augmentations $(\Tau_1, \Tau_2)$. 
+In principle, the empirical expectation should be more precise with denser sampling. 
+Symmetrization supplies an extra pair $(\Tau_2, \Tau_1)$.
+This explains that symmetrization is not necessary for our method to work, yet it is able to improve accuracy, as we have observed in Sec. 4.6.
+
+### 5.2. Proof of concept
+We design a series of proof-of-concept experiments that stem from our hypothesis. 
+They are methods different with SimSiam, and they are designed to verify our hypothesis.
+Multi-step alternation. 
+We have hypothesized that the SimSiam algorithm is like alternating between (7) and (8), with an interval of one step of SGD update. 
+Under this hypothesis, it is likely for our formulation to work if the interval has multiple steps of SGD.
+In this variant, we treat $t$ in (7) and (8) as the index of an outer loop; and the sub-problem in (7) is updated by an inner loop of $k$ SGD steps. 
+In each alternation, we pre-compute the $\eta_x$ required for all $k$ SGD steps using (10) and cache them in memory. 
+Then we perform $k$ SGD steps to update $\theta$. 
+We use the same architecture and hyper-parameters as SimSiam. 
+The comparison is as follows:
+![t5_2_(1)](images/t5_2_(1).png)
+Here, "1-step" is equivalent to SimSiam, and “1-epoch” denotes the $k$ steps required for one epoch. 
+All multi-step variants work well. 
+The 10-/100-step variants even achieve better results than SimSiam, though at the cost of extra pre-computation. 
+This experiment suggests that the alternating optimization is a valid formulation, and SimSiam is a special case of it.
+
+**Expectation over augmentations** 
+The usage of the predictor $h$ is presumably because the expectation $E_\Tau[\cdot]$ in (9) is ignored. 
+We consider another way to approximate this expectation, in which we find $h$ is not needed.
+In this variant, we do not update $\eta_x$ directly by the assignment (10); instead, we maintain a moving-average: $\eta^t_x \leftarrow m * \eta^{t−1}_x + (1 −m) * F_{\theta^t}(\Tau'(x))$, where m is a momentum coefficient (0.8 here). 
+This computation is similar to maintaining the memory bank as in [36]. 
+This moving-average provides an approximated expectation of multiple views. 
+This variant has 55.0% accuracy without the predictor $h$. 
+As a comparison, it fails completely if we remove $h$ but do not maintain the moving average (as shown in Table 1a). 
+This proof-of-concept experiment supports that the usage of predictor $h$ is related to approximating $E_\Tau[\cdot]$.
+
+### 5.3. Discussion
+Our hypothesis is about what the optimization problem can be. 
+It does not explain why collapsing is prevented.  
+We point out that SimSiam and its variants’ non-collapsing behavior still remains as an empirical observation.
+Here we briefly discuss our understanding on this open question. 
+The alternating optimization provides a different trajectory, and the trajectory depends on the initialization.
+It is unlikely that the initialized $\eta$, which is the output of a randomly initialized network, would be a constant. 
+Starting from this initialization, it may be difficult for the alternating optimizer to approach a constant $\eta_x$ for all $x$, because the method does not compute the gradients w.r.t. $\eta$ jointly for all $x$. 
+The optimizer seeks another trajectory (Figure 2 left), in which the outputs are scattered (Figure 2 middle).
+
+## 6. Comparisons
+### 6.1. Result Comparisons
+**ImageNet**. 
+We compare with the state-of-the-art frameworks in Table 4 on ImageNet linear evaluation. 
+For fair comparisons, all competitors are based on our reproduction, and "+" denotes improved reproduction vs. the original papers (see supplement). 
+For each individual method, we follow the hyper-parameter and augmentation recipes in its original paper.(*6) 
+All entries are based on a standard ResNet-50, with two 224×224 views used during pre-training.
+Table 4 shows the results and the main properties of the methods. 
+SimSiam is trained with a batch size of 256, using neither negative samples nor a momentum encoder. 
+Despite it simplicity, SimSiam achieves competitive results. 
+It has the highest accuracy among all methods under 100-epoch pre-training, though its gain of training longer is smaller. 
+It has better results than SimCLR in all cases.
+
+(*6) In our BYOL reproduction, the 100, 200(400), 800-epoch recipes follow the 100, 300, 1000-epoch recipes in [15]: $lr$ is {0.45, 0.3, 0.2}, $wd$ is
+{1e-6, 1e-6, 1.5e-6}, and momentum coefficient is {0.99, 0.99, 0.996}.
+
+![Table4](images/Table4.png)
+Table 4. **Comparisons on ImageNet linear classification.** 
+All are based on **ResNet-50*** pre-trained with **two 224×224 views**. 
+Evaluation is on a single crop. 
+All competitors are from our reproduction, and "+" denotes improved reproduction vs. original papers (see supplement).
+
+**Transfer Learning**. 
+In Table 5 we compare the representation quality by transferring them to other tasks, including VOC [12] object detection and COCO [26] object detection and instance segmentation. 
+We fine-tune the pre-trained models end-to-end in the target datasets. 
+We use the public codebase from MoCo [17] for all entries, and search the fine-tuning learning rate for each individual method. 
+All methods are based on 200-epoch pre-training in ImageNet
+using our reproduction.
+Table 5 shows that SimSiam’s representations are transferable beyond the ImageNet task. 
+It is competitive among these leading methods. The “base” SimSiam in Table 5 uses the baseline pre-training recipe as in our ImageNet experiments. 
+We find that another recipe of $lr=0.5$ and $wd=1e-5$ (with similar ImageNet accuracy) can produce better results in all tasks (Table 5, "SimSiam, optimal").
+We emphasize that all these methods are highly successful for transfer learning—in Table 5, they can surpass or be on par with the ImageNet supervised pre-training counterparts in all tasks. 
+Despite many design differences, a common structure of these methods is the Siamese network.
+This comparison suggests that the Siamese structure is a core factor for their general success.
+
+![Table5](images/Table5.png)
+Table 5. **Transfer Learning**. All unsupervised methods are based on 200-epoch pre-training in ImageNet. VOC 07 detection: Faster R-CNN [32] fine-tuned in VOC 2007 trainval, evaluated in VOC 2007 test; VOC 07+12 detection: Faster R-CNN fine-tuned in VOC 2007 trainval + 2012 train, evaluated in VOC 2007 test; COCO detection and COCO instance segmentation: Mask R-CNN [18] (1×schedule) fine-tuned in COCO 2017 train, evaluated in COCO 2017 val. 
+All Faster/Mask R-CNN models are with the C4-backbone [13]. 
+All VOC results are the average over 5 trials. **Bold entries** are within 0.5 below the best.
+
+## 6.2. Methodology Comparisons
+Beyond accuracy, we also compare the methodologies of these Siamese architectures. 
+Our method plays as a hub to connect these methods. 
+Figure 3 abstracts these methods.  
+The “encoder” subsumes all layers that can be shared between both branches (e.g., backbone, projection MLP [8], prototypes [7]). The components in red are those missing in SimSiam. 
+We discuss the relations next.
+**Relation to SimCLR [8]**. SimCLR relies on negative samples (“dissimilarity”) to prevent collapsing. 
+SimSiam can be thought of as “SimCLR without negatives”.
+To have a more thorough comparison, we append the prediction MLP $h$ and stop-gradient to SimCLR.(*7) Here is the ablation on our SimCLR reproduction:
+![t6_2_(1)](images/t6_2_(1).png)
+Neither the stop-gradient nor the extra predictor is necessary or helpful for SimCLR. 
+As we have analyzed in Sec. 5, the introduction of the stop-gradient and extra predictor is presumably a consequence of another underlying optimization problem. 
+It is different from the contrastive learning problem, so these extra components may not be helpful.
+
+(*7) We append the extra predictor to one branch and stop-gradient to the
+other branch, and symmetrize this by swapping.
+
+**Relation to SwAV [7]**. 
+SimSiam is conceptually analogous to “SwAV without online clustering”. We build up this connection by recasting a few components in SwAV. 
+(i) The shared prototype layer in SwAV can be absorbed into the Siamese encoder. 
+(ii) The prototypes were weight-normalized outside of gradient propagation in [7];
+we instead implement by full gradient computation [33].(*8)
+(iii) The similarity function in SwAV is cross-entropy. 
+With these abstractions, a highly simplified SwAV illustration is shown in Figure 3.
+
+(*8) This modification produces similar results as original SwAV, but it can enable end-to-end propagation in our ablation.
+
+![Figure3](images/Figure3.png)
+Figure 3. **Comparison on Siamese architectures**. 
+The encoder includes all layers that can be shared between both branches.
+The dash lines indicate the gradient propagation flow. 
+In BYOL, SwAV, and SimSiam, the lack of a dash line implies stop-gradient, and their symmetrization is not illustrated for simplicity. 
+The components in red are those missing in SimSiam.
+
+SwAV applies the Sinkhorn-Knopp (SK) transform [10] on the target branch (which is also symmetrized [7]). 
+The SK transform is derived from online clustering [7]: it is the outcome of clustering the current batch subject to a balanced partition constraint. 
+The balanced partition can avoid collapsing. Our method does not involve this transform.
+We study the effect of the prediction MLP h and stop-gradient on SwAV. 
+Note that SwAV applies stop-gradient on the SK transform, so we ablate by removing it. 
+Here is the comparison on our SwAV reproduction:
+![t6_2_(2)](images/t6_2_(2).png)
+Adding the predictor does not help either. Removing stop-gradient (so the model is trained end-to-end) leads to divergence. 
+As a clustering-based method, SwAV is inherently an alternating formulation [7]. 
+This may explain why stop-gradient should not be removed from SwAV.
+
+**Relation to BYOL [15]**. 
+Our method can be thought of as "BYOL without the momentum encoder", subject to many implementation differences. 
+The momentum encoder may be beneficial for accuracy (Table 4), but it is not necessary for preventing collapsing. Given our hypothesis in Sec. 5, the $\eta$ sub-problem (8) can be solved by other optimizers, e.g., a gradient-based one. 
+This may lead to a temporally smoother update on η. Although not directly related, the momentum encoder also produces a smoother version of $\eta$. 
+We believe that other optimizers for solving (8) are also plausible, which can be a future research problem.
+
+##  Conclusion
+We have explored Siamese networks with simple designs. 
+The competitiveness of our minimalist method suggests that the Siamese shape of the recent methods can be a core reason for their effectiveness. 
+Siamese networks are natural and effective tools for modeling invariance, which is a focus of representation learning. 
+We hope our study will attract the community’s attention to the fundamental role of Siamese networks in representation learning.
+
+## A. Implementation Details
+**Unsupervised pre-training**. 
+Our implementation follows the practice of existing works [36, 17, 8, 9, 15].
+
+*Data augmentation*. 
+We describe data augmentation using the PyTorch [31] notations. 
+Geometric augmentation is $RandomResizedCrop$ with scale in [0.2,1.0] [36] and $RandomHorizontalFlip$. 
+Color augmentation is $ColorJitter$ with {brightness, contrast, saturation, hue}strength of {0.4, 0.4, 0.4, 0.1}with an applying probability of 0.8, and $RandomGrayscale$ with an applying probability of 0.2. 
+Blurring augmentation [8] has a Gaussian kernel with std in [0.1,2.0].
+
+*Initialization*. 
+The convolution and fc layers follow the default PyTorch initializers. Note that by default PyTorch initializes fc layers' weight and bias by a uniform distribution $\mu(−\sqrt{k}, \sqrt{k})$ where $k= \frac{1*}{in_ channels}$. 
+Models with substantially different fc initializers (e.g., a fixed std of 0.01) may not converge. 
+Moreover, similar to the implementation of [8], we initialize the scale parameters as 0 [14] in the last BN layer for every residual block.
+
+*Weight decay*. 
+We use a weight decay of 0.0001 for all parameter layers, including the BN scales and biases, in the SGD optimizer. 
+This is in contrast to the implementation of [8, 15] that excludes BN scales and biases from weight decay in their LARS optimizer.
+
+**Linear evaluation**. 
+Given the pre-trained network, we train a supervised linear classifier on frozen features, which are from ResNet’s global average pooling layer (pool5).
+The linear classifier training uses base $lr = 0.02$ with a cosine decay schedule for 90 epochs, weight decay = 0, momentum=0.9, batch size=4096 with a LARS optimizer [38]. 
+We have also tried the SGD optimizer following [17] with base $lr = 30.0$, weight decay = 0, momentum = 0.9, and batch size=256, which gives ∼1% lower accuracy. 
+After training the linear classifier, we evaluate it on the center 224×224 crop in the validation set.
+
+## B. Additional Ablations on ImageNet
+The following table reports the SimSiam results vs. the output dimension $d$:
+![tA_(1)](images/tA_(1).png)
+It benefits from a larger $d$ and gets saturated at $d = 2048$.
+This is unlike existing methods [36, 17, 8, 15] whose accuracy is saturated when d is 256 or 512.
+In this table, the prediction MLP’s hidden layer dimension is always 1/4 of the output dimension. 
+We find that this bottleneck structure is more robust. 
+If we set the hidden dimension to be equal to the output dimension, the training can be less stable or fail in some variants of our exploration. 
+We hypothesize that this bottleneck structure, which behaves like an auto-encoder, can force the predictor to digest the information. 
+We recommend to use this bottleneck structure for our method.
+
+## C. Reproducing Related Methods
+Our comparison in Table 4 is based on our reproduction of the related methods. 
+We re-implement the related methods as faithfully as possible following each individual paper.
+In addition, we are able to improve SimCLR, MoCo v2, and SwAV by small and straightforward modifications: specifically, we use 3 layers in the projection MLP in SimCLR and SwAV (vs. originally 2), and use symmetrized loss for MoCo v2 (vs. originally asymmetric). 
+Table C.1 compares our reproduction of these methods with the original papers' results (if available). 
+Our reproduction has better results for SimCLR, MoCo v2, and SwAV (denoted as "+" in Table 4), and has at least comparable results for BYOL.
+
+![TableC1](images/TableC1.png)
+Table C.1. **Our reproduction vs. original papers’ results**. 
+All are based on ResNet-50 pre-trained with two 224×224 crops.
+
+## D. CIFAR Experiments
+We have observed similar behaviors of SimSiam in the CIFAR-10 dataset [24]. 
+The implementation is similar to that in ImageNet. 
+We use SGD with base $lr = 0.03$ and a cosine decay schedule for 800 epochs, weight decay = 0.0005, momentum = 0.9, and batch size = 512. 
+The input image size is 32×32. We do not use blur augmentation. 
+The backbone is the CIFAR variant of ResNet-18 [19], followed by a 2-layer projection MLP. 
+The outputs are 2048-d.  
+Figure D.1 shows the kNN classification accuracy (left) and the linear evaluation (right). 
+Similar to the ImageNet observations, SimSiam achieves a reasonable result and does not collapse. 
+We compare with SimCLR [8] trained with the same setting. 
+Interestingly, the training curves are similar between SimSiam and SimCLR. SimSiam is slightly better by 0.7% under this setting.
+
+![FigureD1](images/FigureD1.png)
+Figure D.1. CIFAR-10 experiments. Left: validation accuracy of
+kNN classification as a monitor during pre-training. Right: linear
+evaluation accuracy. The backbone is ResNet-18.
