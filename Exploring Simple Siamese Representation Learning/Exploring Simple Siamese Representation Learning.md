@@ -74,50 +74,50 @@ We view these models as Siamese networks with “indirect” weight-sharing.
 (*2) n BYOL’s arXiv v3 update, it reports 66.9% accuracy with 300-epoch pre-training when removing the momentum encoder and increasing the predictor’s learning rate by 10×. 
 Our work was done concurrently with this arXiv update. Our work studies this topic from different perspectives, with better results achieved.
 
-## 3. Method
-Our architecture (Figure 1) takes as input two randomly
-augmented views x1 and x2 from an image x. 
-The two views are processed by an encoder network f consisting of a backbone (e.g., ResNet [19]) and a projection MLP head [8]. 
-The encoder f shares weights between the two views.  
-A prediction MLP head [15], denoted as h, transforms the output of one view and matches it to the other view. 
-Denoting the two output vectors as p1 ,h(f(x1)) and z2 ,f(x2), we minimize their negative cosine similarity:
+## 3. Method(手法)
+我々のアーキテクチャ(Figure 1)は、画像$x$から2つのランダムなビュー $x_1, x_2$ を拡張子入力とする。
 
 ![Figure1](images/Figure1.png)
 Figure 1. **SimSiam architecture** 
-Two augmented views of one image are processed by the same encoder network $f$ (a backbone plus a projection MLP). 
-Then a prediction MLP h is applied on one side, and a stop-gradient operation is applied on the other side. 
-The model maximizes the similarity between both sides. 
-It uses neither negative pairs nor a momentum encoder.
+1つの画像を拡張した2つのビューが、同一のencoder network $f$(バックボーン＋射影MLP)によって処理される。
+次に、一方に予測MLP $h$が適用され、もう一方にstop-gradient 演算が適用される。
+本モデルは両者の類似度を最大化します。 
+negative pairもmomentum encoderも使わない。
+
+この2つのビューは、バックボーン(例えばResNet[19])と射影MLPヘッド[8]から構成されるエンコーダネットワーク$f$によって処理される。
+エンコーダ$f$は2つのビュー間で重みを共有する。 
+*h*と表記される予測MLPヘッド[15]は、一方のビューの出力を変換し、もう一方のビューにマッチさせる。
+2つの出力ベクトルを $p_1 \triangleq h(f(x_1))$ 、 $z_2 \triangleq f(x_2)$ と定義すると、それらのcos類似度の-1倍を最小化する：
 
 $$
 \mathcal{D}(p_1, z_2) = -\frac{p_1}{\|p_1\|_2}\cdot \frac{z_2}{\|z_2\|_2} \tag{1}
 $$
-where $\|\cdot\|_2$ is $\mathcal{l}_2$-norm. 
-This is equivalent to the mean squared error of `2-normalized vectors [15], up to a scale of 2. 
-Following [15], we define a symmetrized loss as:
+
+ここで $\|\cdot\|_2$ は $\mathcal{l}_2$-normである。 
+これは$l_2$正規化されたベクトルのMSE[15]に等しく、最大で2のスケールまでとなる。
+参考文献[15]に従い, 対称lossを次のように定義する:
 
 $$
 \mathcal{L} = \frac{1}{2}\mathcal{D}(p_1, z_2) + \frac{1}{2}\mathcal{D}(p_2, z_1) \tag{2}
 $$
 
-This is defined for each image, and the total loss is averaged over all images. 
-Its minimum possible value is −1.
-An important component for our method to work is a stop-gradient ($stopgrad$) operation (Figure 1). 
-We implement it by modifying (1) as:
+これは画像ごとに定義され、全損失は全画像の平均となる。 最小値は-1である。
+この方法が機能するための重要な要素は、stop-gradient($stopgrad$)演算である(Figure 1)。
+(1)を次のように修正して実装する：
 
 $$
 \mathcal{D}(p_1, stapgrad(z_2)) \tag{3}
 $$
 
-This means that z2 is treated as a constant in this term. 
-Similarly, the form in (2) is implemented as:
+これは、$z_2$を定数項として扱うという意味である。
+同様に、(2)式をこの方式で次の様に実装する:
 
 $$
 \mathcal{L} = \frac{1}{2}\mathcal{D}(p_1, stopgrad(z_2)) + \frac{1}{2}\mathcal{D}(p_2, stopgrad(z_1)) \tag{4}
 $$
 
-Here the encoder on $x2$ receives no gradient from $z2$ in the first term, but it receives gradients from $p2$ in the second term (and vice versa for $x1$).
-The pseudo-code of SimSiam is in Algorithm 1.
+ここで、$x_2$ のエンコーダは、第1項では$z_2$から勾配を受け取らないが、第2項では$p_2$から勾配を受け取る（$x_1$はその逆）。
+SimSiamの擬似コードはAlgorithm1にある。
 
 ![Algorithm1](images/Algorithm1.png)
 
