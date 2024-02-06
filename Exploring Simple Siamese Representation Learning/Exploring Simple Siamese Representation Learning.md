@@ -122,31 +122,31 @@ SimSiamの擬似コードはAlgorithm1にある。
 ![Algorithm1](images/Algorithm1.png)
 
 **Baseline settings** 
-Unless specified, our explorations use the following settings for unsupervised pre-training:
+特に指定しない限り、我々の探索では教師なし事前学習に以下の設定を使用する：
 
-- *Optimizer* 
-We use SGD for pre-training. Our method does not require a large-batch optimizer such as LARS [38] (unlike [8, 15, 7]). 
-We use a learning rate of lr×BatchSize/256 (linear scaling [14]), with a base $lr= 0.05$. 
-The learning rate has a cosine decay schedule [27, 8]. 
-The weight decay is 0.0001 and the SGD momentum is 0.9.
-The batch size is 512 by default, which is friendly to typical 8-GPU implementations. 
-Other batch sizes also work well (Sec. 4.3). 
-We use batch normalization (BN) [22] synchronized across devices, following [8, 15, 7].
+- *Optimizer(最適化器)* 
+事前学習にはSGD(確率的勾配降下法)を利用する。
+提案手法ではLARS[38]のような大きなバッチサイズの最適化器を必要としない([8, 15, 7]とはことなる)。
+学習率には $lr \times BatchSize / 256$を使用する(線形スケーリング[14])。基本となる$lr$は$lr= 0.05$とする。
+学習率にはcos減衰スケージュール[27, 8]を使用する。
+係数の減衰は0.0001でSGDのモメンタムは0.9とする。
+バッチサイズは基本的には512を使用する、これは典型的な8-GPUでの実装に合っている。
+ほかのバッチサイズでも同様に機能する(Sec. 4.3). 
+デバイス間で同期させたbatch normalization(BN)を使用する[22]([8, 15, 7]のように)。
 
-- *Projection MLP* 
-The projection MLP (in $f$) has BN applied to each fully-connected (fc) layer, including its output fc. 
-Its output fc has no ReLU. The hidden fc is 2048-d.
-This MLP has 3 layers.
+- *Projection MLP(射影MLP)* 
+($f$中の)射影MLPは、出力fcを含む全結合層(fc)にBNを適用している。
+出力fcにはReLUがない．隠れfcは2048次元とする。 このMLPは3層である。
 
-- *Prediction MLP* 
-The prediction MLP ($h$) has BN applied to its hidden fc layers. 
-Its output fc does not have BN (ablation in Sec. 4.4) or ReLU. This MLP has 2 layers.
-The dimension of $h$’s input and output ($z$ and $p$) is $d = 2048$, and $h$’s hidden layer’s dimension is 512, making h a bottleneck structure (ablation in supplement).
-We use ResNet-50 [19] as the default backbone. Other im-
-plementation details are in supplement. We perform 100-
-epoch pre-training in ablation experiments.
+- *Prediction MLP(推論MLP)* 
+推論MLP($h$)の隠れ層のfc層はBNを有する。
+出力の全結合層にはBN(Sec 4.4のablationにて)やReLUは無い。
+このMLPは2層である。
+The dimension of $h$'s input and output ($z$ and $p$) is $d = 2048$, and $h$’s hidden layer’s dimension is 512, making h a bottleneck structure (ablation in supplement).
+We use ResNet-50 [19] as the default backbone. Other implementation details are in supplement. 
+We perform 100 epoch pre-training in ablation experiments.
 
-Experimental setup. We do unsupervised pre-training on the 1000-class ImageNet training set [11] without using labels. 
+**Experimental setup**. We do unsupervised pre-training on the 1000-class ImageNet training set [11] without using labels. 
 The quality of the pre-trained representations is evaluated by training a supervised linear classifier on frozen representations in the training set, and then testing it in the validation set, which is a common protocol. 
 The implementaion details of linear classification are in supplement.
 
