@@ -138,3 +138,55 @@ $$
 L2層は $5 \times 5 \times 32$のフィルタ、L3層は $1\times1\times200$ のフィルタを用い、ともに200個の特徴マップを出力する。
 3. 同様に、L4～L8 をサイズ $1 \times 1$ の畳み込みフィルタに置き換えることで、1回のフォワードパスで全ての位置の出力を計算することができる。
 残念ながら、各視差に対してフォワードパスを行う必要がある。
+
+## 4. Stereo method
+マッチング・コストを有意義に評価するためには、ステレオ手法と組み合わせる必要がある。 
+我々が用いたステレオ手法は、Meiら[11]の影響を受けている。
+
+### 4.1. Cross-based cost aggregation
+隣接する画素からの情報は、一定のウィンドウ上でマッチングコストを平均化することで結合することができる。
+この方法は、ウィンドウ内の深度が一定であるという仮定に反する深度の不連続面付近では失敗する。
+我々は、サポートが類似した視差を持つピクセルからのみ収集されるように、各ピクセルの近傍を適応的に選択する方法が好ましいと思っている。
+クロスベース・コスト・アグリゲーション[21]では、類似した画像強度値を持つ画素からなる、各位置の周りの局所近傍を構築する。
+cross-baseコスト集約は、各位置に直立十字を構築することから始まる。
+位置 $\mathbf{p}$ における左腕 $\mathbf{p}_l$ は、以下の2つの条件が成立する限り左に伸びる：
+
+- $|I( \mathbf{p}) - I(\mathbf{p}_l) | < \tau$. 位置 $\mathbf{p}$ と $\mathbf{p}_l$ における画像輝度の差の絶対値は $\tau$ より小さい。 
+- $\| \mathbf{p} - \mathbf{p}_l \| < \eta$. $\mathbf{p}$と $\mathbf{p}_l$ の水平距離(上下の腕の場合は垂直距離)が $\eta$ より小さい。 
+
+右腕、下腕、上腕も同様に作る。4本の腕が分かれば、サポート領域 $U(\mathbf{p})$ は、$\mathbf{p}$ の垂直腕上にあるすべての位置 $\mathbf{q}$ の水平腕の和と定義できる(Figure3参照)。
+
+![Figure3](images/Figure3.png)
+Figure 3. 位置 $\mathbf{p}$ のサポート領域。$\mathbf{q}$ の垂直アーム上にある全ポジション $\mathbf{q}$ の水平アームの統合。
+
+Zhangら[21]は、ステレオペアの両画像のサポート領域を考慮した集計を提案する。
+$U^L$ と $U^R$は、左右の画像のサポート領域を表すとする。
+我々は決獄したサポート領域 $U_d$ を次の様に定義する:
+
+$$
+U_d(\mathbf{p}) = {\mathbf{q}|\mathbf{q} \in U^L(\mathbf{p}), \mathbf{qd} \in U^R(\mathbf{pd})}. \tag{7}
+$$
+
+マッチングコストは結合されたサポート領域状で平均を取る:
+
+$$
+\begin{align}
+C^0_{CBCA}(\mathbf{p},d) &=& C_{CNN}(\mathbf{p},d), \tag{8} \\
+C^i_{CBCA}(\mathbf{p},d) &=& \frac{1}{U_d(\mathbf{p})} \sum_{\mathbf{q} \in U_d(\mathbf{p})} C^{i-1}_{CBCA}(\mathbf{q},d), \tag{9}
+\end{align}
+$$
+
+ここで$i$はイテレーション番号である。
+我々は4回の平均処理を繰り返す。すなわち、cross-baseのコスト集計の出力は $C^4_{CBCA}$ である。
+
+### 4.2. Semiglobal matching
+我々は、視差画像に滑らかさ制約を課すことで、マッチングコストを精緻化する。
+Hirschmuller [4]に従い、視差画像 $D$ に依存するエネルギー関数 $E(D)$ を定義する：
+
+$$
+\begin{aligned}
+E(D) &= \sum_{\mathbf{p}} \left(C^4_{CBCA}(\mathbf{p}, D(\mathbf{p})) \right. \\
+& + \sum_{\mathbf{q} \in \mathit{N}_{\mathbf{p}}} P_1 \times \{ | D(\mathbf{p}) - D(\mathbf{q})| = 1\} \\
+& \left. + \sum_{\mathbf{q} \in \mathit{N}_{\mathbf{p}}} P_2 \times \{ | D(\mathbf{p}) - D(\mathbf{q})| > 1\}  \right), \tag{10}
+\end{aligned}
+$$
