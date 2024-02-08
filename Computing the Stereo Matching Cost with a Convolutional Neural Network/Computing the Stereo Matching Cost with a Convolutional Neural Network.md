@@ -167,7 +167,7 @@ $$
 U_d(\mathbf{p}) = {\mathbf{q}|\mathbf{q} \in U^L(\mathbf{p}), \mathbf{qd} \in U^R(\mathbf{pd})}. \tag{7}
 $$
 
-マッチングコストは結合されたサポート領域状で平均を取る:
+マッチングコストは結合されたサポート領域上で平均を取る:
 
 $$
 \begin{align}
@@ -190,3 +190,72 @@ E(D) &= \sum_{\mathbf{p}} \left(C^4_{CBCA}(\mathbf{p}, D(\mathbf{p})) \right. \\
 & \left. + \sum_{\mathbf{q} \in \mathit{N}_{\mathbf{p}}} P_2 \times \{ | D(\mathbf{p}) - D(\mathbf{q})| > 1\}  \right), \tag{10}
 \end{aligned}
 $$
+
+$1\{\cdot\}$ は指示関数関数(条件を満たしたら1そうでなければ0を返す)とする。
+第1項は、マッチングコストが高い視差 $D(p)$ にペナルティを与える。 
+第2項は、近傍画素の視差が1つ異なる場合にペナルティ $P_1$ を加える。 
+第3項は、隣接する視差が1より多く異なる場合に、より大きなペナルティ$P_2$ を加える。
+$E(D)$を2次元で最小化するのではなく、動的計画法を用いて単一方向で最小化を行う。 
+この解決策では、最適化していない方向の視差画像を滑らかにするインセンティブがないため、望ましくないストリーキング効果が発生する。
+セミグローバルマッチングでは、多くの方向でエネルギー$E(D)$を最小化し、平均して最終結果を得る。 
+Hirschmuller[4]は16方向を選択することを提案しているが、我々は水平2方向と垂直2方向のみを最適化し、対角線方向を追加してもシステムの精度は向上しなかった。 
+$E(D)$を方向$mathbf{r}$で最小化するために、マッチングコスト$C_r( \mathbf{p},d)$ を以下の再帰関係で定義する：
+
+$$
+\begin{aligned}
+C_r(\mathbf{p},d) &= C^4_{CBCA}(\mathbf{p},d) − \min_k C_r(\mathbf{p} − \mathbf{r},k) \\
+    &+ \min\left\{ C_r(\mathbf{p} − \mathbf{r}, d), C_r(\mathbf{p} − \mathbf{r}, d - 1) + P_1, \right. \\
+    &\left. C_r(\mathbf{p} − \mathbf{r}, d + 1) + P_1, \min_k C_r(\mathbf{p} − \mathbf{r},k) + P_2 \right\}
+\end{aligned} \tag{ 11 }
+$$
+
+第2項は $C_r(\mathbf{p},d)$ の値が大きくなりすぎるのを防ぐために含まれており、最適視差マップには影響しない。
+パラメータ $P_1$ と $P_2$ は、視差のジャンプが画像のエッジと一致するように、画像の勾配に従って設定される。 
+$D_1 = |I^L(\mathbf{p}) −I^L(\mathbf{p} − \mathbf{r})|$ そして $D_2 = |I^R(\mathbf{pd}) −I^R(\mathbf{pd −r})|$ とする。
+規則に従って $P_1$ と $P_2$ を設定する：
+
+$$
+\begin{aligned}
+&P_1 = \prod_1, &P_2 = \prod_2 &if D_1 < \tau_{SO}, D_2 < \tau_{SO}, \\
+&P_1 = \prod_1/4, &P_2 = \prod_2/4 &if D_1 \ge \tau{SO},D_2 < \tau_{SO},\\
+&P_1 = \prod_1/4, &P_2 = \prod_2/4 &if D_1 < \tau_{SO},D_2 \ge \tau_{SO},\\
+&P_1 = \prod_1/10, &P_2 = \prod_2/10 &if D_1 \ge \tau_{SO},D_2 \ge\tau_{SO};\\
+\end{aligned}
+$$
+
+ここで、$|prod_1, \prod_2$, $\tau_{SO}$ はハイパーパラメータである。 
+最終的なコスト $C_{SGM}({\mathbf{p},d})$ は4方向全ての平均を取ることで計算される：
+
+$$
+C_{SGM}(\mathbf{p},d) = \frac{1}{4} \sum_r C_r(\mathbf{p}, d) \tag{12}
+$$
+
+セミグローバルマッチングの後、前節で説明したように、クロスベースのコスト集計を繰り返す。
+
+### 4.3. Computing the disparity image
+視差画像 $D$ は winner-take-all 戦略で計算される。すなわち、$C(\mathbf{p}, d)$ を最小化する視差　$d$ を見つける。
+
+$$
+D(\mathbf{p}) = \argmin_d C(\mathbf{p}, d). \tag{13}
+$$
+
+#### 4.3.1. Interpolation
+$D^L$ は左画像を参照画像とした視差マップ、つまり$D^L(\mathbf{p}) = D(\mathbf{p})$を表し、$D^R$は右画像を参照画像とした視差マップを表す。
+$D^L$ , $D^R$ ともにオクルージョン領域では誤差を持つ。
+左右の一貫性チェックを行うことで、これらのエラーを検出しようとする。 
+各位置 $\mathbf{p}$ を以下のようにラベル付けする。
+
+$$
+\begin{aligned}
+&correct &if |d-D^R(\mathbf{pd})| \le 1,& for d = D^L(\mathbf{p}), \\
+&mismatch &if |d-D^R(\mathbf{pd})| \le 1,& for\ any\ other\ d, \\
+&occlusion &otherwise
+\end{aligned}
+$$
+
+オクルージョンとマークされた位置については、新しい視差値を背景から得たい。 
+正しいとラベル付けされた位置が見つかるまで左へ移動して補間し、その値を使用する。 
+ミスマッチとマークされた位置については、16の異なる方向から最も近い正しいピクセルを見つけ、それらの視差の中央値を用いて補間する。 
+補間された視差マップを$D_{INT}$と呼ぶ。
+
+#### 4.3.2. Subpixel enhancement
