@@ -36,45 +36,48 @@ BYOLとは異なるが、SimCLRやSwAVのように、我々の手法は2つの�
 stop-gradientの重要性は、解こうとしている最適化問題の根底に別の問題があることを示唆している。 
 我々は、暗黙のうちに2つの変数セットが存在し、SimSiamはそれぞれのセットを交互に最適化するような振る舞いをするという仮説を立てた。 
 この仮説を検証するための概念実証実験を行う。
-
-Our simple baseline suggests that the Siamese architectures can be an essential reason for the common success of the related methods. 
-Siamese networks can naturally introduce inductive biases for modeling invariance, as by definition “invariance” means that two observations of the same concept should produce the same outputs. 
-Analogous to convolutions [25], which is a successful inductive bias via weight-sharing for modeling translation-invariance, the weight-sharing Siamese networks can model invariance w.r.t. more complicated transformations (e.g., augmentations). 
-We hope our exploration will motivate people to rethink the fundamental roles of Siamese architectures for unsupervised representation learning.
+我々の単純なベースラインは、siamese型アーキテクチャが、関連する手法に共通する成功の本質的な理由になり得ることを示唆している。 
+siamese networkは、"不変性"をモデル化するための帰納的バイアスを自然に導入することができる。 
+translation-invarianceをモデル化するための重み共有による帰納的バイアスに成功した畳み込み[25]に類似して、重み共有siamese networkは、より複雑な変換(例えばaugmentation)に対する不変性をモデル化することができる。 
+我々の研究が、教師なし表現学習におけるsiameseアーキテクチャの基本的な役割を再考する動機付けになれば幸いである。
 
 ## 2. Related Work
 **Siamese networks** 
-Siamese networks [4] are general models for comparing entities. 
-Their applications include signature [4] and face [34] verification, tracking [3], one-shot learning [23], and others. 
-In conventional use cases, the inputs to Siamese networks are from different images, and the comparability is determined by supervision.
+シャムネットワーク[4]は、実体を比較するための一般的なモデルである。 
+その応用例としては、署名[4]や顔[34]の検証、追跡[3]、ワンショット学習[23]などがある。 
+従来の使用例では、シャムネットワークへの入力は異なる画像からであり、比較可能性は監視によって決定される。
+
 **Contrastive learning** 
-The core idea of contrastive learning [16] is to attract the positive sample pairs and repulse the negative sample pairs. 
-This methodology has been recently popularized for un-/self-supervised representation learning [36, 30, 20, 37, 21, 2, 35, 17, 29, 8, 9]. 
-Simple and effective instantiations of contrastive learning have been developed using Siamese networks [37, 2, 17, 8, 9].
-In practice, contrastive learning methods benefit from a large number of negative samples [36, 35, 17, 8]. 
-These samples can be maintained in a memory bank [36]. 
-In a Siamese network, MoCo [17] maintains a queue of negative samples and turns one branch into a momentum encoder to improve consistency of the queue. SimCLR [8] directly uses negative samples coexisting in the current batch, and it
-requires a large batch size to work well.
+対照学習[16]の核となる考え方は、正のサンプル・ペアを引き付け、負のサンプル・ペアを斥けることである。 
+この方法論は近年、教師なし/自己教師ありの表現学習[36, 30, 20, 37, 21, 2, 35, 17, 29, 8, 9]のために広まっている。 
+siameseを用いた、単純で効果的な対比学習法が開発されている[37, 2, 17, 8, 9]。 
+実際には、対照学習法は多数の不例サンプルから利益を得ることができる[36, 35, 17, 8]。 
+これらのサンプルはメモリーバンクに保持することができる[36]。 
+siamese networkでは、MoCo [17]は負サンプルのキューを維持し、キューの一貫性を向上させるために、1つのブランチをmomentum encoderに変える。
+SimCLR[8]は、現在のバッチに共存する負サンプルを直接使用する。そして、大きなバッチサイズで有効に動作する。
+
 **Clustering** 
-Another category of methods for unsupervised representation learning are based on clustering [5, 6, 1, 7].  
-They alternate between clustering the representations and learning to predict the cluster assignment. 
-SwAV [7] incorporates clustering into a Siamese network, by computing the assignment from one view and predicting it from another view. 
-SwAV performs online clustering under a balanced partition constraint for each batch, which is solved by the Sinkhorn-Knopp transform [10].
-While clustering-based methods do not define negative exemplars, the cluster centers can play as negative protopes. 
-Like contrastive learning, clustering-based methods require either a memory bank [5, 6, 1], large batches [7], or a queue [7] to provide enough samples for clustering.
+教師なし表現学習のもう一つのカテゴリーは、クラスタリングに基づくものである[5, 6, 1, 7]。  
+これらは表現をクラスタリングすることと、クラスタ割り当てを予測する学習を交互に行う。 
+SwAV [7]はクラスタリングをsiamese netwworkに組み込み、あるビューから割り当てを計算し、別のビューからそれを予測する。 
+SwAVは各バッチに対して、Sinkhorn-Knopp変換[10]によって解かれる均衡分割制約の下でオンラインクラスタリングを実行する。 
+クラスタリングベースの手法は不例サンプル抽出器を定義しないが、クラスタ中心は不例の原型として機能することができる。 
+対比学習と同様に、クラスタリングに基づく手法は、クラスタリングに十分なサンプルを提供するために、memory bank[5, 6, 1]、大規模バッチ[7]、またはキュー[7]のいずれかを必要とする。
+
 **BYOL** 
-BYOL [15] directly predicts the output of one view from another view. 
-It is a Siamese network in which one branch is a momentum encoder.(*1) 
-It is hypothesized in [15] that the momentum encoder is important for BYOL to avoid collapsing, and it reports failure results if removing the mo- mentum encoder (0.3% accuracy, Table 5 in [15]).(*2) 
-Our empirical study challenges the necessity of the momentum encoder for preventing collapsing. 
-We discover that the stop-gradient operation is critical. This discovery can be obscured with the usage of a momentum encoder, which is always accompanied with stop-gradient (as it is not updated by its parameters’ gradients). 
-While the moving-average behavior may improve accuracy with an appropriate momentum coefficient, our experiments show that it is not directly related to preventing collapsing.
+BYOL[15]は、あるビューの出力を別のビューから直接予測する。 
+これは、siamese networkの片方のブランチがmomentum encoder(*1)になっているものである。
+[15]では、BYOLが破綻しないためにはmomentum encoderが重要であるという仮説が立てられており、momentum encoderを取り除くと破綻するという結果が報告されている(0.3%の精度、[15]の表5)
+(*2) 我々の実証研究では、破綻を防ぐためのmomentum encoderの必要性に挑戦している。 
+我々は、stop-gradient操作が重要であることを発見した。
+この発見は、stop-gradient(パラメータの勾配によって更新されないため)を常に伴う運動量エンコーダの使用によって不明瞭になる可能性があります。 
+移動平均のふるまいは、適切なmomentum係数があれば精度を向上させる可能性があるが、我々の実験によれば、それは崩壊の防止とは直接関係がない。
 
-(*1) MoCo [17] and BYOL [15] do not directly share the weights between the two branches, though in theory the momentum encoder should converge to the same status as the trainable encoder. 
-We view these models as Siamese networks with “indirect” weight-sharing.
+(*1) MoCo[17]とBYOL[15]は、理論的にはmomentum encoderは学習可能エンコーダと同じ状態に収束するはずであるが、2つのブランチ間で直接重みを共有していない。 
+我々はこれらのモデルを「間接的な」重み共有のsiamese networkとみなす。
 
-(*2) n BYOL’s arXiv v3 update, it reports 66.9% accuracy with 300-epoch pre-training when removing the momentum encoder and increasing the predictor’s learning rate by 10×. 
-Our work was done concurrently with this arXiv update. Our work studies this topic from different perspectives, with better results achieved.
+(*2)BYOLのarXiv v3アップデートでは、momentum encoderを除去し、予測器の学習率を10倍増加させた場合、300エポックの事前学習で66.9%の精度を報告している。 
+我々の研究は、このarXivの更新と同時に行われた。我々の研究は、異なる観点からこのトピックを研究し、より良い結果を達成している。
 
 ## 3. Method(手法)
 我々のアーキテクチャ(Figure 1)は、画像$x$から2つのランダムなビュー $x_1, x_2$ を拡張子入力とする。
