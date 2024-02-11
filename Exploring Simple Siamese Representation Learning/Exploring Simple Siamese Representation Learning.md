@@ -162,67 +162,70 @@ ImageNet-1K[11]に対して、ラベルを使用せずに教師なし事前学�
 特に、このモデルの崩壊しない解の原因となるものに注目する。
 
 ### 4.1. Stop-gradient
-Figure 2 presents a comparison on “with vs. without stop-gradient”. 
-The architectures and all hyper-parameters are kept unchanged, and stop-gradient is the only difference.
-Figure 2 (left) shows the training loss. Without stop-gradient, the optimizer quickly finds a degenerated solution and reaches the minimum possible loss of −1. 
-To show that the degeneration is caused by collapsing, we study the standard deviation (std) of the $l_2$-normalized output $z/\|z\|_2$ . 
-If the outputs collapse to a constant vector, their std over all samples should be zero for each channel. 
-This can be observed from the red curve in Figure 2 (middle).  
-As a comparison, if the output $z$ has a zero-mean isotropic Gaussian distribution, we can show that the std of $z/\|z\|_2$ is $\frac{1}{\sqrt{d}}$ (*3).
-
-(*3)  Here is an informal derivation: denote $z/\|z\|_2$ as $z'$, that is, $z'_i = z_i/(\sum^d_{j=1} z^2_j)^{\frac{1}{2}}$ for the $i$-th channel. 
-If $z_j$ is subject to an i.i.d Gaussian distribution: $z_j \approx \mathcal{N}(0,1), \forall j$, then $z'_i \approx z_i/d^{\frac{1}{2}}$ and $std[z'_i]\approx 1/d^{\frac{1}{2}}$.
+Figure 2 は"stop-gradient の有無"の比較を示している。
 
 ![Figure2](images/Figure2.png)
-Figure 2. SimSiam with vs. without stop-gradient. Left plot: training loss. Without stop-gradient it degenerates immediately. Middle
-plot: the per-channel std of the `2-normalized output, plotted as the averaged std over all channels. Right plot: validation accuracy of a
-kNN classifier [36] as a monitor of progress. Table: ImageNet linear evaluation (“w/ stop-grad” is mean±std over 5 trials).
+Figure 2. SimSiam の stop-gradient の有無の比較。
+左: training loss. stop-gradient が無いとすぐに縮退する。
+中央: $l_2$正規化した出力のチャネルごとの標準偏差。全チャネルの標準偏差の平均値としてプロットしている。
+右: kNN-classifier[36] によるvalidationでの精度
+それぞれの進捗となっている。
+Table: ImageNet 線形評価(ネットワークを固定し1層の線形層を出力につなぎ、それだけを学習させた場合の精度)("w/ stop-grad" は5回の志向の平均とmean±標準偏差)。
 
-The blue curve in Figure 2 (middle) shows that with stop-gradient, the std value is near 1√d. This indicates that the outputs do not collapse, and they are scattered on the unit hypersphere.
-Figure 2 (right) plots the validation accuracy of a k-nearest-neighbor (kNN) classifier [36]. 
-This kNN classifier can serve as a monitor of the progress. 
-With stop-gradient, the kNN monitor shows a steadily improving accuracy.
-The linear evaluation result is in the table in Figure 2.  
-SimSiam achieves a nontrivial accuracy of 67.7%. 
-This result is reasonably stable as shown by the std of 5 trials.  
-Solely removing stop-gradient, the accuracy becomes 0.1%, which is the chance-level guess in ImageNet.
+アーキテクチャとすべてのハイパーパラメーターに変更はなく、ストップグラディエントだけが異なる。
+Figure 2の(左)は学習lossを示している。
+stop-gradientを用いない場合、オプティマイザはすぐに縮退した解を見つけ、可能な限り最小の損失である-1に達する。 
+縮退が崩壊によるものであることを示すために、$l_2$正規化した出力の標準偏差 $z/|z|_2$ を調べる。
+出力結果が定数ベクトルに崩壊している場合、全てのサンプルの標準偏差は各チャネルで0となる。
+これは、Figure 2(中央)の赤い曲線から見ることができる。
+比較として、出力 $z$ がゼロ平均等方ガウス分布の場合、$z/|z|_2$ の標準偏差は $\frac{1}{\sqrt{d}}$であることを示せる(*3)。
+
+(*3) 非公式な導出： $z/|z|_2$を$z'$とすると、$i$番目のチャネルに対して、$z'_i = z_i/(\sum^d_{j=1}  z^2_j)^{\frac{1}{2}}$ となる。 
+$z_j$ がi.i.d(独立同一分布)ガウス分布： $z_j \approx \mathcal{N}(0,1), \forall j$ に従うとすると、 $z'_i \approx z_i/d^{ \frac{1}{2}}$ そして $std[z'_i]\approx 1/d^{\frac{1}{2}}$ となる。
+
+Figure 2(中)の青い曲線は、stop-gradientの場合、標準偏差が $1\sqrt{d}$ 付近にあることを示している。 
+これは出力が崩壊せず、単位超球面上に散らばっていることを示している。
+Figure 2(右)は、k-NN分類器[36]の検証精度をプロットしたものです。 
+このkNN分類器は、進捗のモニターとして役立ちます。 
+stop-gradienありの場合、kNNで見ることで着実に精度が向上していることがわかる。 
+線形評価結果はFigure 2の表にある。  
+SimSiamは、67.7%の非自明な精度を達成する。 
+この結果は、5回の試行の標準偏差が示すように、適度に安定している。  
+stop-gradientを取り除くだけで、精度は0.1%になり、これはImageNetにおける偶然レベルの推測値である。
 
 **Discussion**
-Our experiments show that there exist collapsing solutions. 
-The collapse can be observed by the minimum possible loss and the constant outputs.(*4) 
+我々の実験は、崩壊解が存在することを示している。 
+崩壊は可能な限り最小の損失と一定の出力によって観察することができる(*4)。
 
-(*4) We note that a chance-level accuracy (0.1%) is not sufficient to indicate collapsing. 
-A model with a diverging loss, which is another pattern of failure, may also exhibit a chance-level accuracy.
+(*4) 偶然レベルの精度(0.1%)では崩壊を示すには不十分であることに注意されたい。 
+別の失敗のパターンである損失が発散するモデルも、偶然レベルの精度を示すことがある。
 
-The existence of the collapsing solutions implies that it is insufficient for
-our method to prevent collapsing solely by the architecture designs (e.g., predictor, BN, `2-norm). 
-In our comparison, all these architecture designs are kept unchanged, but they do not prevent collapsing if stop-gradient is removed.
-The introduction of stop-gradient implies that there should be another optimization problem that is being solved underlying. 
-We propose a hypothesis in Sec. 5.
+崩壊解が存在するということは、我々の手法がアーキテクチャ設計(例えば、予測子、BN、$l_2$-norm)のみで崩壊を防ぐには不十分であることを意味する。 
+stop-gradientの導入は、根本的に別の最適化問題が存在することを意味する。 
+Sec. 5 で仮説を提案する。
 
 ### 4.2. Predictor
-In Table 1 we study the predictor MLP’s effect.
-The model does not work if removing $h$ (Table 1a), i.e., $h$ is the identity mapping. 
-Actually, this observation can be expected if the symmetric loss (4) is used. 
-Now the loss is $\frac{1}{2}\mathcal{D}(z_1,stopgrad(z_2)) + \frac{1}{2}\mathcal{D}(z_2,stopgrad(z_1))$. 
-Its gradient has the same direction as the gradient of $\mathcal{D}(z1,z2)$, with the magnitude scaled by 1/2. 
-In this case, using stopgradient is equivalent to removing stop-gradient and scaling the loss by 1/2. 
-Collapsing is observed (Table 1a).
-We note that this derivation on the gradient direction is valid only for the symmetrized loss. 
-But we have observed that the asymmetric variant (3) also fails if removing $h$, while it can work if $h$ is kept (Sec. 4.6). 
-These experiments suggest that h is helpful for our model.
-If $h$ is fixed as random initialization, our model does not work either (Table 1b). 
-However, this failure is not about collapsing. 
-The training does not converge, and the loss remains high. 
-The predictor $h$ should be trained to adapt to the representations.
-We also find that $h$ with a constant $lr$ (without decay) can work well and produce even better results than the baseline (Table 1c). 
-A possible explanation is that h should adapt to the latest representations, so it is not necessary to force it converge (by reducing lr) before the representations are sufficiently trained. 
-In many variants of our model, we have observed that $h$ with a constant $lr$ provides slightly better results. 
-We use this form in the following subsections.
+Table 1 で予測器のMLPの効果を研究している。
+$h$ を取り除くとモデルは機能しない(Table 1a)、つまり$h$は同一性写像である。
+実は、この観測はsymmetric loss(4)を使えば推定できる。 
+このとき、損失は $\frac{1}{2}\mathcal{D}(z_1,stopgrad(z_2)) + \frac{1}{2}\mathcal{D}(z_2,stopgrad(z_1))$ となる。
+その勾配は $\mathcal{D}(z1,z2)$ の勾配と同じ方向で、大きさは1/2にスケーリングされる。 
+この場合、$stopgrad$ を使うことは、stop-gradientを取り除き、損失を1/2にスケーリングすることと等価である。 崩壊が観測される。
+勾配方向に関するこの導出は、対称化された損失に対してのみ有効であることに注意。
+しかし、非対称変形(3)も$h$を取り除くと失敗し、$h$を残すとうまくいくことが観測されている(Sec 4.6)。 
+これらの実験は、$h$ が我々のモデルにとって有用であることを示唆している。
+$h$ をランダムな初期値で固定した場合も、我々のモデルはちゃんと働かない(Table 1b)。
+しかし、この失敗は崩壊ではない。 
+学習は収束せず、損失は高いままである。 
+予測器 $h$ は学習により表現に適応する。
+定数$lr$(減衰なし)で学習した$h$もうまく機能し、ベースラインよりさらに良い結果を生むことが分かる(Table 1c)。
+考えられる説明としては、$h$ は最新の表現に適応すべきなので、表現が十分に訓練される前に(lrを小さくして)強制的に収束させる必要はない、ということである。 
+我々のモデルの多くのバリエーションにおいて、$h$を定数 $lr$ で学習することで、わずかに良い結果が得られることが観察されている。 
+以下の節ではこの形式を用いる。
 
 ![Table1](images/Table1.png)
-Table 1. **Effect of prediction MLP** (ImageNet linear evaluation accuracy with 100-epoch pre-training). 
-In all these variants, we use the same schedule for the encoder $f$ (lr with cosine decay).
+Table 1. **MLPによる推論の効果** (100epochの事前学習からのImageNetに対するlinear evaluation の精度). 
+すべての場合において、 encoder $f$ の学習すジュールは同一とした($lr$ をcos減衰).
 
 ### 4.3. Batch Size
 Table 2 reports the results with a batch size from 64 to 4096. 
