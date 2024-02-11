@@ -153,13 +153,13 @@ $h$ の入力と出力($z$と$p$)の次元は $d = 2048$ であり、 $h$ の隠
 アブレーション実験では $100$ epochの事前学習を行う。
 
 **Experimental setup** 
-We do unsupervised pre-training on the 1000-class ImageNet training set [11] without using labels. 
-The quality of the pre-trained representations is evaluated by training a supervised linear classifier on frozen representations in the training set, and then testing it in the validation set, which is a common protocol. 
-The implementaion details of linear classification are in supplement.
+ImageNet-1K[11]に対して、ラベルを使用せずに教師なし事前学習を行う。 
+事前学習された表現の品質は、学習セットに対して固定された表現に対して教師あり線形分類器を訓練し、Validationセットでそれをテストすることで評価する。 
+線形分類の実装の詳細は補足にある。
 
 ## 4. Empirical Study
-In this section we empirically study the SimSiam behaviors. 
-We pay special attention to what may contribute to the model’s non-collapsing solutions.
+このセクションでは、SimSiamの動作を実証的に研究する。 
+特に、このモデルの崩壊しない解の原因となるものに注目する。
 
 ### 4.1. Stop-gradient
 Figure 2 presents a comparison on “with vs. without stop-gradient”. 
