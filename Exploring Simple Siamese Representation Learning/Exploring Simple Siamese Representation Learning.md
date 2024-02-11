@@ -3,37 +3,39 @@
 [code](https://github.com/facebookresearch/simsiam)
 
 ## Abstract
-Siamese networks have become a common structure in various recent models for unsupervised visual representation learning. 
-These models maximize the similarity between two augmentations of one image, subject to certain conditions for avoiding collapsing solutions. 
-In this paper, we report surprising empirical results that simple Siamese networks can learn meaningful representations even using none of the following: (i) negative sample pairs, (ii) large batches, (iii) momentum encoders. 
-Our experiments show that collapsing solutions do exist for the loss and structure, but a stop-gradient operation plays an essential role in preventing collapsing. 
-We provide a hypothesis on the impli- cation of stop-gradient, and further show proof-of-concept experiments verifying it. Our “SimSiam” method achieves competitive results on ImageNet and downstream tasks. 
-We hope this simple baseline will motivate people to rethink the roles of Siamese architectures for unsupervised representation learning. 
-Code will be made available.
+siamese networkは、教師なし視覚表現学習のための最近の様々なモデルにおいて一般的な構造となっている。
+これらのモデルは、解の崩壊を回避するためのある条件に従って、1つの画像の2つの拡張間の類似度を最大化する。
+本論文では、単純なsiamese networkが、以下のいずれを用いなくても、意味のある表現を学習できるという驚くべき実証結果を報告する： (i)負のサンプルペア、(ii)大きなバッチ、(iii)momentum encoder
+我々の実験によれば、損失と構造には破綻解が存在するが、破綻を防ぐためにはstop-gradient(勾配停止)演算が重要な役割を果たす。
+我々はstop-gradientの重要性に関する仮説を提供し、さらにそれを検証する概念実証実験を示す。
+提案手法 "SimSiam"は、ImageNetや下流タスクにおいて競争力のある結果を達成した。
+このシンプルなベースラインが、教師なし表現学習におけるシャムアーキテクチャの役割を再考する動機付けとなることを期待している。
+コードは公開予定。
 
 ## 1. Introduction
-Recently there has been steady progress in un-/self-supervised representation learning, with encouraging results on multiple visual tasks (e.g., [2, 17, 8, 15, 7]). 
-Despite various original motivations, these methods generally involve certain forms of Siamese networks [4]. 
-Siamese networks are weight-sharing neural networks applied on two or more inputs. 
-They are natural tools for comparing (including but not limited to “contrasting”) entities. 
-Recent methods define the inputs as two augmentations of one image, and maximize the similarity subject to different conditions.
-An undesired trivial solution to Siamese networks is all outputs “collapsing” to a constant. 
-There have been several general strategies for preventing Siamese networks from collapsing. 
-Contrastive learning [16], e.g., instantiated in SimCLR [8], repulses different images (negative pairs) while attracting the same image’s two views (positive pairs).
-The negative pairs preclude constant outputs from the solution space. 
-Clustering [5] is another way of avoiding constant output, and SwAV [7] incorporates online clustering into Siamese networks. Beyond contrastive learning and clustering, BYOL [15] relies only on positive pairs but it does not collapse in case a momentum encoder is used.  
-In this paper, we report that simple Siamese networks can work surprisingly well with none of the above strategies for preventing collapsing. Our model directly maximizes the similarity of one image’s two views, using neither negative pairs nor a momentum encoder. 
-It works with typical batch sizes and does not rely on large-batch training. 
-We illustrate this “SimSiam” method in Figure 1.  
-Thanks to the conceptual simplicity, SimSiam can serve as a hub that relates several existing methods. 
-In a nutshell, our method can be thought of as “BYOL without the momentum encoder”. 
-Unlike BYOL but like SimCLR and SwAV, our method directly shares the weights between the two branches, so it can also be thought of as “SimCLR without negative pairs”, and “SwAV without online clustering”. 
-Interestingly, SimSiam is related to each method by removing one of its core components. 
-Even so, SimSiam does not cause collapsing and can perform competitively.
-We empirically show that collapsing solutions do exist, but a stop-gradient operation (Figure 1) is critical to prevent such solutions. 
-The importance of stop-gradient suggests that there should be a different underlying optimization problem that is being solved. 
-We hypothesize that there are implicitly two sets of variables, and SimSiam behaves like alternating between optimizing each set. 
-We provide proof-of-concept experiments to verify this hypothesis.
+近年、教師なし／自己教師ありの表現学習は着実に進歩しており、複数の視覚タスクで有望な結果が得られている（例えば[2, 17, 8, 15, 7]）。 
+様々な当初の動機にもかかわらず、これらの方法は一般的にある種のsiamese network[4]を含んでいる。 
+siamese networkは、2つ以上の入力に適用される重み共有ニューラル・ネットワークである。 
+siamese networkは、実体を比較する(「対照」を含むが、これに限定されない)ための自然なツールである。 
+最近の手法は、入力を1つの画像の2つの拡張として定義し、異なる条件下で類似度を最大化する。
+siamese networkの望ましくない些細な解は、すべての出力が定数に"崩壊"することである。 
+siamese networkの崩壊を防ぐための一般的な戦略はいくつかある。 
+例えばSimCLR[8]でインスタンス化された対照学習[16]は、同じ画像の2つのビュー(正のペア)を引き寄せる一方で、異なる画像（負のペア)を反発させる。 負のペアは、解空間から定数出力を排除する。 
+クラスタリング[5]も一定の出力を避ける方法のひとつであり、SwAV[7]はオンライン・クラスタリングをsiamese networkに組み込んでいる。
+対比学習やクラスタリング以外にも、BYOL [15]は正例のペアにのみ依存しているが、momentum encoderを使用した場合には破綻しない。  
+本論文では、単純なsiamese networkが、崩壊を防ぐための上記の戦略のどれを用いなくても、驚くほどうまく機能することを報告する。
+我々のモデルは、不例ペアもmomentum encoderも使わず、1つの画像の2つのビューの類似度を直接最大化する。 
+一般的なバッチサイズで動作し、大規模なバッチ訓練に依存しない。 
+この"SimSiam"手法をFigure 1に示す。  
+概念が単純なため、SimSiamはいくつかの既存の手法を関連付けるハブの役割を果たすことができる。 
+一言で言えば、我々の手法は「momentum encoderのないBYOL」と考えることができる。 
+BYOLとは異なるが、SimCLRやSwAVのように、我々の手法は2つのブランチ間で重みを直接共有するため、「不例ペアのないSimCLR」、「オンラインクラスタリングのないSwAV」とも考えることができる。
+興味深いことに、SimSiamは各手法の核となるコンポーネントを1つ取り除くことで、各手法と関連している。 
+それでも、SimSiamは崩壊を起こさず、競争力のある結果を出すことができる。 
+崩壊解が存在することを経験的に示すが、そのような解を防ぐには、stop-gradient(勾配停止)操作(Figure 1)が重要である。 
+stop-gradientの重要性は、解こうとしている最適化問題の根底に別の問題があることを示唆している。 
+我々は、暗黙のうちに2つの変数セットが存在し、SimSiamはそれぞれのセットを交互に最適化するような振る舞いをするという仮説を立てた。 
+この仮説を検証するための概念実証実験を行う。
 
 Our simple baseline suggests that the Siamese architectures can be an essential reason for the common success of the related methods. 
 Siamese networks can naturally introduce inductive biases for modeling invariance, as by definition “invariance” means that two observations of the same concept should produce the same outputs. 
@@ -142,11 +144,13 @@ SimSiamの擬似コードはAlgorithm1にある。
 推論MLP($h$)の隠れ層のfc層はBNを有する。
 出力の全結合層にはBN(Sec 4.4のablationにて)やReLUは無い。
 このMLPは2層である。
-The dimension of $h$'s input and output ($z$ and $p$) is $d = 2048$, and $h$’s hidden layer’s dimension is 512, making h a bottleneck structure (ablation in supplement).
-We use ResNet-50 [19] as the default backbone. Other implementation details are in supplement. 
-We perform 100 epoch pre-training in ablation experiments.
+$h$ の入力と出力($z$と$p$)の次元は $d = 2048$ であり、 $h$ の隠れ層の次元は $512$ であるため、 $h$ はボトルネック構造である(付録のアブレーション)。 
+本論文ではデフォルトのバックボーンとしてResNet-50[19]を用いる。
+その他の実装の詳細は補足にある。 
+アブレーション実験では $100$ epochの事前学習を行う。
 
-**Experimental setup**. We do unsupervised pre-training on the 1000-class ImageNet training set [11] without using labels. 
+**Experimental setup** 
+We do unsupervised pre-training on the 1000-class ImageNet training set [11] without using labels. 
 The quality of the pre-trained representations is evaluated by training a supervised linear classifier on frozen representations in the training set, and then testing it in the validation set, which is a common protocol. 
 The implementaion details of linear classification are in supplement.
 
