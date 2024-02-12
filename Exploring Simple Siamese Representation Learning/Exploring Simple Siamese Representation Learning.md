@@ -228,101 +228,105 @@ Table 1. **MLPによる推論の効果** (100epochの事前学習からのImageN
 すべての場合において、 encoder $f$ の学習すジュールは同一とした($lr$ をcos減衰).
 
 ### 4.3. Batch Size
-Table 2 reports the results with a batch size from 64 to 4096. 
-When the batch size changes, we use the same linear scaling rule (lr×BatchSize/256) [14] with base $lr = 0.05$.
-We use 10 epochs of warm-up [14] for batch sizes $\ge 1024$.  
-Note that we keep using the same SGD optimizer (rather than LARS [38]) for all batch sizes studied.
-Our method works reasonably well over this wide range of batch sizes. 
-Even a batch size of 128 or 64 performs decently, with a drop of 0.8% or 2.0% in accuracy. 
-The results are similarly good when the batch size is from 256 to 2048, and the differences are at the level of random variations.
-This behavior of SimSiam is noticeably different from SimCLR [8] and SwAV [7]. All three methods are Siamese networks with direct weight-sharing, but SimCLR and SwAV both require a large batch (e.g., 4096) to work well.
-We also note that the standard SGD optimizer does not work well when the batch is too large (even in supervised learning [14, 38]), and our result is lower with a 4096 batch.
-We expect a specialized optimizer (e.g., LARS [38]) will help in this case. 
-However, our results show that a specialized optimizer is not necessary for preventing collapsing.
+Table 2は、バッチサイズが64から4096の場合の結果である。 
+バッチサイズを変える場合に、ベース$lr = 0.05$に大して同じ線形スケーリングルール($lr \times BatchSize/256$)[14]を使用する。 
+$BatchSize \ge 1024$では、10epochのウォームアップ[14]を使用する。  
+なお、検討したすべてのバッチサイズについて、(LARS[38]ではなく)同じSGDオプティマイザを使い続けている。
+我々の手法は、この広いバッチサイズ範囲にわたってそれなりにうまく機能する。 
+バッチサイズが128や64の場合でも、精度が0.8%または2.0%低下する程度で、まずまずの性能を発揮する。 
+バッチサイズが256から2048の場合、結果は同様に良好であり、その差はランダムな変動のレベルである。 
+SimSiamのこの挙動は、SimCLR [8]やSwAV [7]とは明らかに異なる。
+3手法とも、直接重み共有を行うsiamese networkであるが、SimCLRとSwAVは共に大きなバッチ(例えば4096)を必要とする。 
+また、標準的なSGDオプティマイザは、バッチが大きすぎると(教師あり学習[14, 38]でさえ)うまく働かないことに注意する。我々の結果はbatch size $4096$ より小さい。
+この場合、特化したオプティマイザ(例えばLARS[38])が役立つと期待される。 
+しかし、我々の結果は、特化したオプティマイザは崩壊を防ぐのに必要ないことを示している。
 
 ![Table2](images/Table2.png)
-Table 2. **Effect of batch sizes** (ImageNet linear evaluation accuracy with 100-epoch pre-training).
+Table 2. **バッチサイズの影響** (100epochの事前学習からのImageNetに対するlinear evaluation の精度)
 
 ### 4.4. Batch Normalization
-Table 3 compares the configurations of BN on the MLP heads. 
-In Table 3a we remove all BN layers in the MLP heads (10-epoch warmup [14] is used specifically for this entry). 
-This variant does not cause collapse, although the accuracy is low (34.6%). 
-The low accuracy is likely because of optimization difficulty. Adding BN to the hidden layers (Table 3b) increases accuracy to 67.4%.
-Further adding BN to the output of the projection MLP (i.e., the output of $f$) boosts accuracy to 68.1% (Table 3c), which is our default configuration. 
-In this entry, we also find that the learnable affine transformation (scale and offset [22]) in f’s output BN is not necessary, and disabling it leads to a comparable accuracy of 68.2%.
-Adding BN to the output of the prediction MLP $h$ does not work well (Table 3d). 
-We find that this is not about collapsing. 
-The training is unstable and the loss oscillates.
-In summary, we observe that BN is helpful for optimization when used appropriately, which is similar to BN’s behavior in other supervised learning scenarios. 
-But we have seen no evidence that BN helps to prevent collapsing: actually, the comparison in Sec. 4.1 (Figure 2) has exactly the same BN configuration for both entries, but the model collapses if stop-gradient is not used.
+Table 3はMLPヘッド上のBNの構成を比較したものである。
+Table 3aでは、MLPヘッドのBN層をすべて削除している(10-epoch warmup [14]はこのエントリのために特別に使用されています)。
+この変形では、精度は低い(34.6%)ものの、崩壊は起こらない。
+精度が低いのは最適化が難しいからだと思われる。
+隠れ層にBNを追加すると(Table 3b)、精度は67.4%に向上する。
+さらに投影MLPの出力(つまり$f$の出力)にBNを加えると、精度は68.1%に向上する（Table 3c）。
+このエントリでは、$f$ の出力BNにおける学習可能なアフィン変換(スケールとオフセット[22])は不要であり、これを無効にすると68.2%の同程度の精度になることもわかります。
+予測MLP $h$の出力にBNを追加してもうまくいかない（Table 3d）。
+これは崩壊の問題ではないことがわかります。
+学習が不安定で、lossが振動している。
+まとめると、BNは適切に用いれば最適化に役立つということであり、これは他の教師あり学習シナリオにおけるBNの挙動と同様である。
+しかし、BN が崩壊の抑止の一助になっているという証拠は示せていない:
+実際、Sec 4.1 での比較(Figure 2)では、両エントリとも全く同じBN構成になっているが、stop-gradientを使用しないとモデルは崩壊している。
 
 ![Table3](images/Table3.png)
-Table 3. **Effect of batch normalization on MLP heads** (ImageNet linear evaluation accuracy with 100-epoch pre-training).
+Table 3. **MLP heads へのbatch normalizationの影響** (100epochの事前学習からのImageNetに対するlinear evaluation の精度).
 
 ### 4.5. Similarity Function
-Besides the cosine similarity function (1), our method also works with cross-entropy similarity. 
-$We modify $\mathcal{D} as:
-$\mathcal{D}(p1,z2) = −softmax(z2)\cdot log softmax(p1)$. 
-Here the softmax function is along the channel dimension. 
-The output of softmax can be thought of as the probabilities of belonging to each of d pseudo-categories.
-We simply replace the cosine similarity with the cross-entropy similarity, and symmetrize it using (4). 
-All hyper-parameters and architectures are unchanged, though they
-may be suboptimal for this variant. Here is the comparison:
-![t4_5_(1)](images/t4_5_(1).png)
-The cross-entropy variant can converge to a reasonable result without collapsing. 
-This suggests that the collapsing prevention behavior is not just about the cosine similarity.  
-This variant helps to set up a connection to SwAV [7], which we discuss in Sec. 6.2.
+cos類似度関数(1)の他に、提案手法はcroll-entorpy類似度でも動作する。 
+我々は、$\mathcal{D}$ を次のように修正する： 
+$\mathcal{D}(p1,z2) = -softmax(z2) \cdot \log softmax(p1)$. 
+ここで、softmax関数はチャンネル次元に沿ったものである。 
+softmaxの出力は、$d$ 個の擬似カテゴリーに属する確率と考えることができる。 
+余弦類似度を単純にクロスエントロピー類似度に置き換え、(4)を用いて対称化する。 
+すべてのハイパーパラメータとアーキテクチャーに変更はないが、この変形では最適ではないかもしれない。
+以下はその比較です: 
+
+![t4_5_(1)](images/t4_5_(1).png) 
+
+交差エントロピーの変種は、崩壊することなく妥当な結果に収束する。 
+このことは、崩壊防止動作はcos類似度だけではないことを示唆していいる。  
+この変形はSec 6.2で議論するSwAV [7]との関連を設定するのに役立つ。
 
 ### 4.6. Symmetrization
-Thus far our experiments have been based on the symmetrized loss (4). 
-We observe that SimSiam’s behavior of preventing collapsing does not depend on symmetrization.
-We compare with the asymmetric variant (3) as follows:
+これまでの実験は、対称化された損失(4)に基づいている。 
+我々は、SimSiamの崩壊を防ぐ動作が対称化に依存しないことを観察した。 
+非対称の変形(3)と以下のように比較する：
+
 ![t4_6_(1)](images/t4_6_(1).png)
-The asymmetric variant achieves reasonable results. 
-Symmetrization is helpful for boosting accuracy, but it is not related to collapse prevention. 
-Symmetrization makes one more prediction for each image, and we may roughly compensate for this by sampling two pairs for each image in the asymmetric version ("2×"). 
-It makes the gap smaller.
+
+非対称バリアントは妥当な結果を達成している。 
+対称化は精度を上げるのに役立つが、破綻防止とは関係ない。 
+対称化は各画像に対して予測を1つ増やすので、非対称バージョンでは各画像に対して2つのペアをサンプリングすることでこれをおおよそ補うことができる("2×")。 
+これによってギャップが小さくなる。
 
 ### 4.7. Summary
-We have empirically shown that in a variety of settings, SimSiam can produce meaningful results without collapsing. 
-The optimizer (batch size), batch normalization, similarity function, and symmetrization may affect accuracy, but we have seen no evidence that they are related to collapse prevention. 
-It is mainly the stop-gradient operation that plays an essential role.
+我々は、SimSiamが様々な設定において、崩壊することなく意味のある結果を出すことができることを経験的に示しました。 
+オプティマイザ(バッチサイズ)、バッチ正規化、類似関数、対称化は精度に影響を与えるかもしれませんが、それらが崩壊防止に関係しているという証拠は見当たりません。 
+本質的な役割を果たすのは、主にstop-gradient操作です。
 
 ## 5. Hypothesis
-We discuss a hypothesis on what is implicitly optimized by SimSiam, with proof-of-concept experiments provided.
+SimSiamによって暗黙のうちに最適化されるものについての仮説を、概念実証実験を交えて議論する。
+
 ### 5.1. Formulation
-Our hypothesis is that SimSiam is an implementation of an Expectation-Maximization (EM) like algorithm. 
-It implicitly involves two sets of variables, and solves two underlying sub-problems. 
-The presence of stop-gradient is the consequence of introducing the extra set of variables.
-We consider a loss function of the following form:
+我々の仮説では、SimSiamは期待値最大化(EM)のようなアルゴリズムの実装である。 
+SimSiamは、暗黙のうちに2つの変数セットを含み、2つの基本的な部分問題を解く。 
+停止勾配の存在は、余分な変数セットを導入した結果である。 
+以下の式で損失関数を考える：
 
 $$
 \mathcal{L}(\theta, \eta) = E_{x, \tau}\left[ \|\mathcal{F}_\theta(\Tau(x)) - \eth_x\|^2_2\right] \tau{5}
 $$
 
-$F$ is a network parameterized by $\theta$. 
-$\Tau$ is the augmentation.
-$x$ is an image. 
-The expectation $E[\cdot]$ is over the distribution
-of images and augmentations. 
-For the ease of analysis, here we use the mean squared error ‖·‖22, which is equivalent to the cosine similarity if the vectors are $l^2$-normalized. 
-We do not consider the predictor yet and will discuss it later.
-In (5), we have introduced another set of variables which we denote as $\eta$. 
-The size of $\eta$ is proportional to the number of images. 
-Intuitively, $\eta_x$ is the representation of the image $x$, and the subscript $x$ means using the image index to access a sub-vector of $\eta$. 
-$\eta$ is not necessarily the output of a network; it is the argument of an optimization problem.
-With this formulation, we consider solving:
+$F$ はパラメータ $\theta$ を持つネットワーク。 
+$\Tau$ はaugmentationである。 $x$ は画像。
+期待値 $E[\cdot]$ は 画像とaugmentationの分布上の期待値である。
+分析を簡単にするため、ここでは平均二乗誤差 $\|\cdot\|^2_2$ を用いるが、これはベクトルが $l^2$ 正規化されていれば余弦類似度と等価である。 
+(5)では、$\eta$ と呼ぶ別の変数集合を導入した。 $\eta$ の大きさは画像数に比例する。 
+直観的に、$\eta_x$ は画像$x$の表現であり、添え字 $x$ は、画像のインデックスを使って $\eta$ のサブベクトルにアクセスすることを意味する。 
+$\eta$ は必ずしもネットワークの出力ではなく、最適化問題の引数である。 
+この定式化で、解くことを考える：
 
 $$
 \min_{\theta, \eta}\mathcal{L}(\theta, \eta) \tag{6}
 $$
 
-Here the problem is w.r.t. both $\theta$ and $\eta$. 
-This formulation is analogous to k-means clustering [28]. 
-The variable $\theta$ is analogous to the clustering centers: it is the learnable parameters of an encoder. 
-The variable $\eta_x$ is analogous to the assignment vector of the sample $x$ (a one-hot vector in k-means): it is the representation of $x$.
-Also analogous to k-means, the problem in (6) can be solved by an alternating algorithm, fixing one set of variables and solving for the other set. 
-Formally, we can alternate between solving these two subproblems:
+ここでは、$\theta$と $\eta$ の両方が問題である。
+この定式化はk-meansクラスタリング[28]に類似している。
+変数 $\theta$ は、クラスタリング中心と似ている：エンコーダの学習可能なパラメータである。
+変数 $\eta_x$ は、サンプル $x$ の代入ベクトル(k-meansの1-hotベクトル)に類似している：それは $x$ の表現である。 
+また、k-meansに類似して、(6)の問題は交互アルゴリズムで解くことができる：変数の1セットを固定し、他のセットについて解く。 
+形式的には、これら2つの部分問題を交互に解くことができる：
 
 $$
 \begin{align}
@@ -330,43 +334,44 @@ $$
 \eta^t &\leftarrow& arg \min_\eta \mathcal{L}(\theta, \eta) \tag{8}
 \end{align}
 $$
-Here $t$ is the index of alternation and "$\leftarrow$" means assigning.
+
+ここで、$t$ は交替のインデックスであり、" $\leftarrow$ "は代入を意味する。
 
 **Solving for $\theta$** 
-One can use SGD to solve the sub-problem (7). 
-The stop-gradient operation is a natural consequence, because the gradient does not back-propagate to $\eta^{t-1}$ which is a constant in this subproblem.
+SGDを用いて部分問題(7)を解くことができる。 
+勾配が $\eta^{t-1}$ に逆伝播しないので、勾配停止操作は自然な帰結である。
 
 **Solving for $\eta$** 
-The sub-problem (8) can be solved independently for each $\eta_x$. 
-Now the problem is to minimize: $E_\Tau\left[ \|F_{θ^t}(\Tau(x)) − \eta_x‖^2_2 \right]$ for each image $x$, noting that the expectation is over the distribution of augmentation $\Tau$. 
-Due to the mean squared error,(*5) it is easy to solve it by:
+この部分問題(8)は、各 $\eta_x$ について独立に解くことができる。
+この問題は次式の最小化である : 各画像 $x$ に対して、 $E_\Tau\left[ \|F_{\theta^t}(\Tau(x)) − \eta_x‖^2_2 \right]$ 期待値は augmentation $\tau$ の分布上のものである。
+平均二乗誤差(*5)により、簡単に解くことができる：
 
 $$
 \eta^t_x \leftarrow E_\Tau\left[ \mathcal{F}_{\theta^t}(\Tau(x))\right] \tag{9}
 $$
 
-(*5) If we use the cosine similarity, we can approximately solve it by $l_2$-
-normalizing $\mathcal{F}$’s output and $\eta_x$.
+(*5) 余弦類似度を使えば、$l_2$- $\mathcal{F}$の出力と$\eta_x$を正規化することで近似的に解くことができる。
 
-This indicates that $\eta_x$ is assigned with the average representation of $x$ over the distribution of augmentation.
+これは $\eta_x$ は $x$ のaugmentation分布上の平均表現を割り当てている。
 
 **One-step alternation** 
-SimSiam can be approximated by one-step alternation between (7) and (8). 
-First, we approximate (9) by sampling the augmentation only once, denoted as $\Tau'$, and ignoring $ET[\cdot]$.
+SimSiamは、(7)と(8)を1ステップずつ交互に繰り返すことで近似できる。
+まず、$ET[\cdot]$ を無視し、、*1回だけ* 増強量をサンプリングして( $\Tau'$ と表記) (9)を近似する。
 
 $$
 \eta^t_x \leftarrow \mathcal{F}_{\theta^t}(\Tau'(x)) \tag{10}
 $$
 
-Inserting it into the sub-problem (7), we have:
+これを(7)の部分問題に挿入すると、次のようになる：
 
 $$
 \theta^{t+1} \leftarrow \min_\theta E_{x, \Tau}\left[ \|\mathcal{F}_\theta(\Tau(x))\| - \mathcal{F}_{\theta^t}(\Tau'(x))\|^2_2\right] \tag{11}
 $$
 
-Now $\theta^t$ is a constant in this sub-problem, and $\Tau′$ implies another view due to its random nature. 
-This formulation exhibits the Siamese architecture. 
-Second, if we implement (11) by reducing the loss with one SGD step, then we can approach the SimSiam algorithm: a Siamese network naturally with stop-gradient applied.
+ここで、 $\theta^t$ はこの部分問題の定数であり、 $Tau′$ はそのランダムな性質から別の見方を意味する。 
+この定式化はsiamese構造を示す。 
+次に、(11)を1つのSGDステップで損失を減らすように実装すると、SimSiamアルゴリズムに近づくことができる。
+:stop-gradientが適用されたsiamese ネットワーク。
 
 **Predictor** 
 Our above analysis does not involve the predictor $h$. 
@@ -516,14 +521,14 @@ This may lead to a temporally smoother update on η. Although not directly relat
 We believe that other optimizers for solving (8) are also plausible, which can be a future research problem.
 
 ##  Conclusion
-We have explored Siamese networks with simple designs. 
-The competitiveness of our minimalist method suggests that the Siamese shape of the recent methods can be a core reason for their effectiveness. 
-Siamese networks are natural and effective tools for modeling invariance, which is a focus of representation learning. 
-We hope our study will attract the community’s attention to the fundamental role of Siamese networks in representation learning.
+我々はシンプルなデザインでシャム型ネットワークを探索した。 
+我々の最小限の手法の競争力は、最近の手法のsiamese型がその有効性の核心的な理由になり得ることを示唆している。 
+Siameseは、表現学習の焦点である不変性をモデル化するための自然で効果的なツールである。 
+我々の研究が、表現学習におけるsiamese型ネットワークの基本的な役割に関心を集めることを期待している。
 
 ## A. Implementation Details
-**Unsupervised pre-training**. 
-Our implementation follows the practice of existing works [36, 17, 8, 9, 15].
+**Unsupervised pre-training** 
+我々の実装は、既存の研究 [36, 17, 8, 9, 15]の実践に従っている。
 
 *Data augmentation*. 
 We describe data augmentation using the PyTorch [31] notations. 
@@ -581,6 +586,5 @@ We compare with SimCLR [8] trained with the same setting.
 Interestingly, the training curves are similar between SimSiam and SimCLR. SimSiam is slightly better by 0.7% under this setting.
 
 ![FigureD1](images/FigureD1.png)
-Figure D.1. CIFAR-10 experiments. Left: validation accuracy of
-kNN classification as a monitor during pre-training. Right: linear
-evaluation accuracy. The backbone is ResNet-18.
+Figure D.1. CIFAR-10の実験。
+左：事前学習中のモニターとしてのkNN分類の検証精度。右：線形評価精度。バックボーンはResNet-18。
