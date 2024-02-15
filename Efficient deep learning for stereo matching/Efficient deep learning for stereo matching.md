@@ -4,11 +4,11 @@
 [code2](https://github.com/tonyjo/edlsm_pytorch)
 
 ## Abstract
-In the past year, convolutional neural networks have been shown to perform extremely well for stereo estimation. 
-However, current architectures rely on siamese networks which exploit concatenation followed by further processing layers, requiring a minute of GPU computation per image pair. 
-In contrast, in this paper we propose a matching network which is able to produce very accurate results in less than a second of GPU computation. 
-Towards this goal, we exploit a product layer which simply computes the inner product between the two representations of a siamese architecture. We train our network by treating the problem as multi-class classification, where the classes are all possible disparities. 
-This allows us to get calibrated scores, which result in much better matching performance when compared to existing approaches.
+過去1年間で、畳み込みニューラルネットワークがステレオ推定において非常に優れた性能を発揮することが示されてきた。 
+しかし、現在のアーキテクチャは、siamese networkに依存しており、さらに続く処理でlayerの連結を行うため、画像ペアごとに1分のGPU計算を必要とする。 
+これに対して本論文では、GPU計算を1秒未満で非常に正確な結果を生成できるマッチングネットワークを提案する。 
+この目標に向けて、我々はシャムアーキテクチャの2つの表現間の内積を単純に計算する積レイヤーを利用する。我々はこの問題をマルチクラス分類として扱うことでネットワークを訓練する。 
+これにより、較正されたスコアを得ることができ、その結果、既存のアプローチと比較して、マッチング性能が格段に向上する。
 
 ## 1. Introduction
 Reconstructing the scene in 3D is key in many applications such as robotics and self-driving cars. 
