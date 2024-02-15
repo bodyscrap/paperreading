@@ -68,11 +68,12 @@ We note that in concurrent work unpublished at the time of submission of our pap
 also introduced a dot-product layer.
 
 ## 3. Deep Learning for Stereo Matching
-We are interested in computing a disparity image given a stereo pair. 
-Throughout this paper we assume that the image pairs are rectified, thus the epipolar lines are aligned with the horizontal image axis. 
-Let yi ∈ Yi represent the disparity associated with the i-th pixel, and let |Yi| be the cardinality of the set (typically 128 or 256). 
-Stereo algorithms estimate a 3-dimensional cost volume by computing for each pixel in the left image a score for each possible disparity value. 
-This is typically done by exploiting a small patch around the given pixel and a simple hand-crafted representation of each patch. 
+我々は、与えられたステレオペアに対して視差画像を計算することに興味がある。 
+本論文では、画像ペアは平行化されており、したがってエピポーラ線は水平画像軸に沿っていると仮定する。 
+$y_i \in Y_i$ が $i$ 番目の画素に関連する視差を表し、$｜Y_i｜$ が集合の基数(通常128または256)であるとする。 
+ステレオアルゴリズムは、左画像の各画素について、取りうる視差値ごとのスコアを計算することによって、3次元のコスト・ボリュームを推定する。 
+これは通常、与えられたピクセルの周りの小さなパッチと、各パッチのハンドクラフト特徴表現を利用することによって行われる。
+
 In contrast, in this paper we exploit convolutional neural networks to learn how to match.
 Towards this goal, we utilize a siamese architecture, where each branch processes the left or right image respectively. 
 In particular, each branch takes an image as input, and passes it through a set of layers, each consisting of a spatial convolution with a small filter-size (e.g., $5 \times 5$ or $3 \times 3$), followed by a spatial batch normalization and a rectified linear unit (ReLU). 
