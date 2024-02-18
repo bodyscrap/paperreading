@@ -226,6 +226,34 @@ CNN内に空間変換器を配置することで、ネットワークは学習�
 これは、特徴マップに複数のオブジェクトや個別に注目すべき部分がある場合に便利です。 
 純粋なフィードフォワードネットワークにおけるこのアーキテクチャの限界は、並列空間変換器の数によって、ネットワークがモデル化できるオブジェクトの数が制限されることである。
 
+## 4 Experiments
+このセクションでは、多くの教師あり学習タスクにおけるSpatial Transformerネットワークの利用を探求する。 
+Section 4.1では、まずMNIST手書きデータセットの歪んだバージョンに対する実験から始める。
+4.1では、まずMNIST手書きデータセットの歪んだバージョンに対する実験から始め、入力画像を能動的に変換することによって分類性能を向上させる空間変換器の能力を示す。 
+4.2では、Spatial Transformerをテストする。
+4.2では、実世界の困難なデータセットであるStreet View House Numbers [25]を用いて、数字認識のためのSpatial Transformerネットワークをテストし、CNNの畳み込みスタックに埋め込まれた複数のSpatial Transformerを用いた最先端の結果を示す。 
+最後に、Section 4.3で空間変換器の利用について調べる。
+4.3では、CUB-200-2011鳥類データセット[38]において、オブジェクトのパーツを発見し、それらに注目するように学習することで、きめ細かな分類のための複数の並列空間変換器の利用を調査し、最先端の性能を示す。 
+MNISTの追加と共局在化の更なる実験は付録Aにある。
+
+### 4.1 Distorted MNIST
+In this section we use the MNIST handwriting dataset as a testbed for exploring the range of transformations to which a network can learn invariance to by using a spatial transformer.
+We begin with experiments where we train different neural network models to classify MNIST data that has been distorted in various ways: 
+rotation (R), rotation, scale and translation (RTS), projective transformation (P), and elastic warping (E) – note that elastic warping is destructive and can not be inverted in some cases. 
+The full details of the distortions used to generate this data are given in Appendix A. 
+We train baseline fully-connected (FCN) and convolutional (CNN) neural networks, as well as networks with spatial transformers acting on the input before the classification network (ST-FCN and ST-CNN). 
+The spatial transformer networks all use bilinear sampling, but variants use different transformation functions: an affine transformation (Aff), projective transformation (Proj), and a 16-point thin plate spline transformation (TPS) [2]. 
+The CNN models include two max-pooling layers. 
+All networks have approximately the same number of parameters, are trained with identical optimisation schemes (backpropagation, SGD, scheduled learning rate decrease, with a multinomial cross entropy loss), and all with three weight layers in the classification network.
+The results of these experiments are shown in Table 1 (left). Looking at any particular type of distortion of the data, it is clear that a spatial transformer enabled network outperforms its counterpart base network. 
+For the case of rotation, translation, and scale distortion (RTS), the ST-CNN achieves 0.5% and 0.6% depending on the class of transform used for Tθ, whereas a CNN, with two max- pooling layers to provide spatial invariance, achieves 0.8% error. 
+This is in fact the same error that the ST-FCN achieves, which is without a single convolution or max-pooling layer in its network, showing that using a spatial transformer is an alternative way to achieve spatial invariance. 
+ST-CNN models consistently perform better than ST-FCN models due to max-pooling layers in ST-CNN providing even more spatial invariance, and convolutional layers better modelling local structure. 
+We also test our models in a noisy environment, on 60 ×60 images with translated MNIST digits and background clutter (see Fig. 1 third row for an example): an FCN gets 13.2% error, a CNN gets 3.5% error, while an ST-FCN gets 2.0% error and an ST-CNN gets 1.7% error.
+Looking at the results between different classes of transformation, the thin plate spline transformation (TPS) is the most powerful, being able to reduce error on elastically deformed digits by reshaping the input into a prototype instance of the digit, reducing the complexity of the task for the classification network, and does not over fit on simpler data e.g. R. 
+Interestingly, the transformation of inputs for all ST models leads to a “standard” upright posed digit – this is the mean pose found in the training data. In Table 1 (right), we show the transformations performed for some test cases where a CNN is unable to correctly classify the digit, but a spatial transformer network can. 
+Further test examples are visualised in an animation here https://goo.gl/qdEhUu
+
 ![Table1](images/Table1.png)
 Table 1: 
 左：異なる歪んだMNISTデータセットに対する異なるモデルの誤差の割合。
@@ -243,3 +271,77 @@ E: 弾性変形
 E と RTS の例では  thin plate spline の spatial transformer (ST-CNN TPS)を使用している
 一方 R の例では affine変換の spatial transformers (ST-CNN Aff) に角度を空建てて使用している。
 これらの実験の動画によるアニメーションは https://goo.gl/qdEhUu を見てください
+
+### 4.2 Street View House Numbers
+We now test our spatial transformer networks on a challenging real-world dataset, Street View House Numbers (SVHN) [25]. 
+This dataset contains around 200k real world images of house numbers, with the task to recognise the sequence of numbers in each image. 
+There are between 1 and 5 digits in each image, with a large variability in scale and spatial arrangement.
+We follow the experimental setup as in [1, 13], where the data is preprocessed by taking 64 ×64 crops around each digit sequence. We also use an additional more loosely 128 ×128 cropped dataset as in [1]. 
+We train a baseline character sequence CNN model with 11 hidden layers leading to five independent softmax classifiers, each one predicting the digit at a particular position in the sequence.  
+This is the character sequence model used in [19], where each classifier includes a null-character output to model variable length sequences. This model matches the results obtained in [13].
+We extend this baseline CNN to include a spatial transformer immediately following the input (ST-CNN Single), where the localisation network is a four-layer CNN. We also define another extension where before each of the first four convolutional layers of the baseline CNN, we insert a spatial transformer (ST-CNN Multi), where the localisation networks are all two layer fully connected networks with 32 units per layer. 
+In the ST-CNN Multi model, the spatial transformer before the first convolutional layer acts on the input image as with the previous experiments, however the subsequent spatial transformers deeper in the network act on the convolutional feature maps, predicting a
+transformation from them and transforming these feature maps (this is visualised in Table 2 (right) (a)). 
+This allows deeper spatial transformers to predict a transformation based on richer features rather than the raw image. 
+All networks are trained from scratch with SGD and dropout [17], with randomly initialised weights, except for the regression layers of spatial transformers which are initialised to predict the identity transform. 
+Affine transformations and bilinear sampling kernels are used for all spatial transformer networks in these experiments.
+
+![Table2](images/Table2.png)
+Table 2: Left: The sequence error for SVHN multi-digit recognition on crops of 64 ×64 pixels (64px), and inflated crops of 128 ×128 (128px) which include more background. 
+* The best reported result from [1] uses model averaging and Monte Carlo averaging, whereas the results from other models are from a single forward pass of a single model. 
+Right: 
+(a) The schematic of the ST-CNN Multi model. The transformations applied by each spatial transformer (ST) is applied to the convolutional feature map produced by the previous layer. 
+(b) The result of multiplying out the affine transformations predicted by the four spatial transformers in ST-CNN Multi, visualised on the input image.
+
+### 4.3 Fine-Grained Classification
+In this section, we use a spatial transformer network with multiple transformers in parallel to perform fine-grained bird classification. 
+We evaluate our models on the CUB-200-2011 birds dataset [38], containing 6k training images and 5.8k test images, covering 200 species of birds. 
+The birds appear at a range of scales and orientations, are not tightly cropped, and require detailed texture and shape analysis to distinguish. In our experiments, we only use image class labels for training.
+We consider a strong baseline CNN model – an Inception architecture with batch normalisation [18] pre-trained on ImageNet [26] and fine-tuned on CUB – which by itself achieves the state-of-the-art accuracy of 82.3% (previous best result is 81.0% [30]). We then train a spatial transformer network, ST-CNN, which contains 2 or 4 parallel spatial transformers, parameterised for attention and acting on the input image. Discriminative image parts, captured by the transformers, are passed to the part description sub-nets (each of which is also initialised by Inception). 
+The resulting part representations are concatenated and classified with a single softmax layer. The whole architecture is trained on image class labels end-to-end with backpropagation (full details in Appendix A).  
+The results are shown in Table 3 (left). The ST-CNN achieves an accuracy of 84.1%, outperforming the baseline by 1.8%. 
+It should be noted that there is a small (22/5794) overlap between the ImageNet training set and CUB-200-2011 test set1 – removing these images from the test set results in 84.0% accuracy with the same ST-CNN. 
+In the visualisations of the transforms predicted by 2×ST-CNN (Table 3 (right)) one can see interesting behaviour has been learnt: one spatial transformer(red) has learnt to become a head detector, while the other (green) fixates on the central part of the body of a bird. The resulting output from the spatial transformers for the classification network is a somewhat pose-normalised representation of a bird. 
+While previous work such as [3] explicitly define parts of the bird, training separate detectors for these parts with supplied keypoint training data, the ST-CNN is able to discover and learn part detectors in a data-driven manner without any additional supervision. 
+In addition, the use of spatial transformers allows us to use 448px resolution input images without any impact in performance, as the output of the transformed 448px images are downsampled to 224px before being processed.
+
+![Table3](images/Table3.png)
+Table 3: Left: The accuracy on CUB-200-2011 bird classification dataset. Spatial transformer networks with two spatial transformers (2×ST-CNN) and four spatial transformers (4×ST-CNN) in parallel achieve higher accuracy. 
+448px resolution images can be used with the ST-CNN without an increase in computational cost due to downsampling to 224px after the transformers. 
+Right: The transformation predicted by the spatial transformers of 2×ST-CNN (top row) and 4×ST-CNN (bottom row) on the input image. Notably for the 2×ST-CNN, one of the transformers (shown in red) learns to detect heads, while the other (shown in green) detects the body, and similarly for the 4×ST-CNN.
+
+## 5 Conclusion
+In this paper we introduced a new self-contained module for neural networks – the spatial transformer. 
+This module can be dropped into a network and perform explicit spatial transformations of features, opening up new ways for neural networks to model data, and is learnt in an end-to- end fashion, without making any changes to the loss function. 
+While CNNs provide an incredibly strong baseline, we see gains in accuracy using spatial transformers across multiple tasks, resulting in state-of-the-art performance. 
+Furthermore, the regressed transformation parameters from the spatial transformer are available as an output and could be used for subsequent tasks. 
+While we only explore feed-forward networks in this work, early experiments show spatial transformers to be powerful in recurrent models, and useful for tasks requiring the disentangling of object reference frames, as well as easily extendable to 3D transformations (see Appendix A.3).
+
+## A Appendix
+In this section we present the results of two further experiments – that of MNIST addition showing spatial transformers acting on multiple objects in Sect. A.1, and co-localisation in Sect. A.2 showing the application to semi-supervised scenarios. 
+In addition, we give an example of the extension to 3D in Sect. A.3. We also expand upon the details of the experiments from Sect. 4.1 in Sect. A.4, Sect. 4.2 in Sect. A.5, and Sect. 4.3 in Sect. A.6.
+
+### A.1 MNIST Addition
+In this section we demonstrate another use case for multiple spatial transformers in parallel: 
+to model multiple objects. We define an MNIST addition task, where the network must output the sum of the two digits given in the input. 
+Each digit is presented in a separate 42 ×42 input channel (giving 2-channel inputs), but each digit is transformed independently, with random rotation, scale, and translation (RTS).
+We train fully connected (FCN), convolutional (CNN) and single spatial transformer fully connected (ST-FCN) networks, as well as spatial transformer fully connected networks with two parallel spatial transformers (2×ST-FCN) acting on the input image, each one taking both channels as input and transforming both channels. 
+The two 2-channel outputs of the two spatial transformers are concatenated into a 4-channel feature map for the subsequent FCN. As in Sect. 4.1, all networks have the same number of parameters, and are all trained with SGD to minimise the multinomial cross entropy loss for 19 classes (the possible addition results 0-18).
+The results are given in Table 4 (left). Due to the complexity of this task, the FCN reaches a minimum error of 47.7%, however a CNN with max-pooling layers is far more accurate with 14.7% error. 
+Adding a single spatial transformer improves the capability of an FCN by focussing on a single region of the input containing both digits, reaching 18.5% error. 
+However, by using two spatial transformers, each transformer can learn to focus on transforming the digit in a single channel (though receiving both channels as input), visualised in Table 4 (right). 
+The transformers co-adapt, producing stable representations of the two digits in two of the four output channels of the spatial transformers. 
+This allows the 2×ST-FCN model to achieve 5.8% error, far exceeding that of other models.
+
+![Table4](images/Table4.png)
+Table 4: Left: The percentage error for the two digit MNIST addition task, where each digit is transformed independently in separate channels, trained by supplying only the label of the sum of the two digits. 
+The use of two spatial transformers in parallel, 2×ST-FCN, allows the fully-connected neural network to become invariant to the transformations of each digit, giving the lowest error. 
+All the models used for each column have approximately the same number of parameters. 
+Right: A test example showing the learnt behaviour of each spatial transformer (using a thin plate spline (TPS) transformation). 
+The 2-channel input (the blue bar denotes separation between channels) is fed to two independent spatial transformers, ST1 and ST2, each of which operate on both channels. 
+The outputs of ST1 and ST2 and concatenated and used as a 4-channel input to a fully connected network (FCN) which predicts the addition of the two original digits. 
+During training, the two spatial transformers co-adapt to focus on a single channel each.
+
+![Table5](images/Table5.png)
+Table 5: Left: The percent of correctly co-localised digits for different MNIST digit classes, for just translated digits (T), and for translated digits with clutter added (TC). 
+Right: The optimisation architecture. We use a hinge loss to enforce the distance between the two outputs of the spatial transformer (ST) to be less than the distance to a random crop, hoping to encourage the spatial transformer to localise the common objects.
