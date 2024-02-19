@@ -94,7 +94,6 @@ localisation ネットワーク関数 $f_{loc}()$ は、全結合ネットワー
 説明を明確にするため、とりあえず $\Tau_\theta$ が2次元アフィン変換 $A_\theta$ であると仮定する。 
 他の変換については後述する。このアフィンの場合、点ごとの変換は
 
-
 $$
 \left(
 \begin{aligned}
@@ -272,42 +271,51 @@ E と RTS の例では  thin plate spline の spatial transformer (ST-CNN TPS)�
 これらの実験の動画によるアニメーションは https://goo.gl/qdEhUu を見てください
 
 ### 4.2 Street View House Numbers
-We now test our spatial transformer networks on a challenging real-world dataset, Street View House Numbers (SVHN) [25]. 
-This dataset contains around 200k real world images of house numbers, with the task to recognise the sequence of numbers in each image. 
-There are between 1 and 5 digits in each image, with a large variability in scale and spatial arrangement.
-We follow the experimental setup as in [1, 13], where the data is preprocessed by taking 64 ×64 crops around each digit sequence. We also use an additional more loosely 128 ×128 cropped dataset as in [1]. 
-We train a baseline character sequence CNN model with 11 hidden layers leading to five independent softmax classifiers, each one predicting the digit at a particular position in the sequence.  
-This is the character sequence model used in [19], where each classifier includes a null-character output to model variable length sequences. This model matches the results obtained in [13].
-We extend this baseline CNN to include a spatial transformer immediately following the input (ST-CNN Single), where the localisation network is a four-layer CNN. We also define another extension where before each of the first four convolutional layers of the baseline CNN, we insert a spatial transformer (ST-CNN Multi), where the localisation networks are all two layer fully connected networks with 32 units per layer. 
-In the ST-CNN Multi model, the spatial transformer before the first convolutional layer acts on the input image as with the previous experiments, however the subsequent spatial transformers deeper in the network act on the convolutional feature maps, predicting a
-transformation from them and transforming these feature maps (this is visualised in Table 2 (right) (a)). 
-This allows deeper spatial transformers to predict a transformation based on richer features rather than the raw image. 
-All networks are trained from scratch with SGD and dropout [17], with randomly initialised weights, except for the regression layers of spatial transformers which are initialised to predict the identity transform. 
-Affine transformations and bilinear sampling kernels are used for all spatial transformer networks in these experiments.
+次に、実世界の難しいデータセットであるStreet View House Numbers(SVHN) [25]でSpatial Transformerネットワークをテストする。 
+このデータセットには、約200kの家屋番号の実世界画像が含まれており、各画像内の数字の並びを認識するタスクがある。 
+各画像には1桁から5桁の数字があり、スケールや空間的配置に大きなばらつきがある。
+[1,13]の実験セットアップに準じ、各桁列の周囲を64×64で切り取ることでデータを前処理する。 
+また、[1]と同様に、$128 \times 128$ のより緩やかな切り抜きデータセットも使用する。 
+我々は、5つの独立したソフトマックス分類器を導く11の隠れ層を持つベースライン文字列CNNモデルを訓練する。  
+これは[19]で使用された文字列モデルであり、各分類器は可変長配列をモデル化するためにヌル文字出力を含む。このモデルは[13]で得られた結果と一致する。
+このベースラインCNNを拡張し、入力直後の空間変換器（ST-CNNシングル）を含むようにした。
+ここで、localisation ネットワークは4層のCNNである。
+また、ベースラインCNNの最初の4つの畳み込み層の前に、空間変換器(ST-CNN Multi)を挿入する拡張も定義する。
+ここで、localisationネットワークは32の要素をもつ2層の全結合層である。
+ST-CNNマルチモデルでは、最初の畳み込み層の前にある空間変換器は、以前の実験と同様に入力画像に作用するが、ネットワークのより深い部分にある後続の空間変換器は、畳み込み特徴マップに作用し、そこから変換を予測し、これらの特徴マップを変換する(これはTable 2(右)(a)に可視化されている)。
+これにより、より深い空間変換器は、生の画像ではなく、より豊富な特徴に基づいて変換を予測することができる。 
+すべてのネットワークは、SGDとドロップアウト[17]を用いて、ランダムに初期化された重みでゼロから学習される。 
+アフィン変換とバイリニアサンプリングカーネルは、これらの実験ではすべての空間変換ネットワークに使用されている。
 
 ![Table2](images/Table2.png)
-Table 2: Left: The sequence error for SVHN multi-digit recognition on crops of 64 ×64 pixels (64px), and inflated crops of 128 ×128 (128px) which include more background. 
-* The best reported result from [1] uses model averaging and Monte Carlo averaging, whereas the results from other models are from a single forward pass of a single model. 
-Right: 
-(a) The schematic of the ST-CNN Multi model. The transformations applied by each spatial transformer (ST) is applied to the convolutional feature map produced by the previous layer. 
-(b) The result of multiplying out the affine transformations predicted by the four spatial transformers in ST-CNN Multi, visualised on the input image.
+Table 2：左：$64 \times 64$ ピクセルのクロップ(64px)と、より多くの背景を含む $128\times 128$ ピクセルのクロップ(128px)に対するSVHN多桁認識のシーケンスエラー。 
+* [1]で報告された最良の結果は、モデル平均とモンテカルロ平均を使用している。 
+一方、他のモデルの結果は、単一モデルのシングルフォワードパスによるものである。
+右：(a) ST-CNNマルチモデルの概略図。各空間変換器(ST)によって適用された変換は、前の層によって生成された畳み込み特徴マップに適用される。 
+(b) ST-CNNマルチの4つの空間変換器によって予測されたアフィン変換を乗算した結果を入力画像上で可視化したもの。
 
 ### 4.3 Fine-Grained Classification
-In this section, we use a spatial transformer network with multiple transformers in parallel to perform fine-grained bird classification. 
-We evaluate our models on the CUB-200-2011 birds dataset [38], containing 6k training images and 5.8k test images, covering 200 species of birds. 
-The birds appear at a range of scales and orientations, are not tightly cropped, and require detailed texture and shape analysis to distinguish. In our experiments, we only use image class labels for training.
-We consider a strong baseline CNN model – an Inception architecture with batch normalisation [18] pre-trained on ImageNet [26] and fine-tuned on CUB – which by itself achieves the state-of-the-art accuracy of 82.3% (previous best result is 81.0% [30]). We then train a spatial transformer network, ST-CNN, which contains 2 or 4 parallel spatial transformers, parameterised for attention and acting on the input image. Discriminative image parts, captured by the transformers, are passed to the part description sub-nets (each of which is also initialised by Inception). 
-The resulting part representations are concatenated and classified with a single softmax layer. The whole architecture is trained on image class labels end-to-end with backpropagation (full details in Appendix A).  
-The results are shown in Table 3 (left). The ST-CNN achieves an accuracy of 84.1%, outperforming the baseline by 1.8%. 
-It should be noted that there is a small (22/5794) overlap between the ImageNet training set and CUB-200-2011 test set1 – removing these images from the test set results in 84.0% accuracy with the same ST-CNN. 
-In the visualisations of the transforms predicted by 2×ST-CNN (Table 3 (right)) one can see interesting behaviour has been learnt: one spatial transformer(red) has learnt to become a head detector, while the other (green) fixates on the central part of the body of a bird. The resulting output from the spatial transformers for the classification network is a somewhat pose-normalised representation of a bird. 
-While previous work such as [3] explicitly define parts of the bird, training separate detectors for these parts with supplied keypoint training data, the ST-CNN is able to discover and learn part detectors in a data-driven manner without any additional supervision. 
-In addition, the use of spatial transformers allows us to use 448px resolution input images without any impact in performance, as the output of the transformed 448px images are downsampled to 224px before being processed.
+このセクションでは、複数の変換器を並列に配置したSpatial Transformerネットワークを用いて、鳥のきめ細かな分類を行う。
+CUB-200-2011鳥類データセット[38]を用いて我々のモデルを評価した。このデータセットには6k枚の学習画像と5.8k枚のテスト画像が含まれ、200種の鳥類をカバーしている。 
+鳥は様々なスケールと方向で現れ、きっちりトリミングされておらず、区別するために詳細なテクスチャと形状分析を必要とする。我々の実験では、学習には画像クラスラベルのみを使用する。
+強力なベースラインCNNモデルを考える
+バッチ正規化[18]を備えたInceptionアーキテクチャをImageNet[26]で事前に訓練し、CUBで微調整することにより、82.3%という最先端の精度を達成する(これまでの最高結果は81.0%[30])。
+ST-CNNは2つまたは4つの並列空間変換器を含み、注意のためにパラメータ化され、入力画像に作用する。
+変換器によって取り込まれた識別可能な画像パーツは、パーツ記述サブネットに渡される(各サブネットもInceptionによって初期化される)。
+得られたパーツ表現は連結され、1つのsoftmax層で分類される。
+アーキテクチャ全体は、バックプロパゲーションによりエンド・ツー・エンドで画像クラスラベルを学習する(詳細はAppendix Aに記載)。  
+結果をTable3(左)に示す。 
+ST-CNNは84.1%の精度を達成し、ベースラインを1.8%上回った。 
+なお、ImageNetトレーニングセットとCUB-200-2011テストセット1との間にはわずかな重複（22/5794）があり、テストセットからこれらの画像を取り除くと、同じST-CNNで84.0%の精度が得られる。
+2×ST-CNNによって予測された変換の視覚化(Table 3(右))を見ると、興味深い動作が学習されていることがわかる：1つのSpatial Transformer(赤)は頭部検出器になるように学習し、もう1つのSpatial Transformer(緑)は鳥の体の中心部分に固定する。
+その結果、分類ネットワーク用の空間変換器からの出力は、鳥の多少ポーズが正規化された表現になる。
+[3]のような先行研究では、鳥の部分を明示的に定義し、供給されたキーポイント学習データでこれらの部分のための別々の検出器を学習しているが、ST-CNNは、追加の監視なしで、データ駆動型の方法で部分検出器を発見し、学習することができる。 
+さらに、Spatial Transformerの使用により、変換された448px画像の出力は処理される前に224pxにダウンサンプリングされるため、性能に影響を与えることなく448px解像度の入力画像を使用することができる。
 
 ![Table3](images/Table3.png)
-Table 3: Left: The accuracy on CUB-200-2011 bird classification dataset. Spatial transformer networks with two spatial transformers (2×ST-CNN) and four spatial transformers (4×ST-CNN) in parallel achieve higher accuracy. 
-448px resolution images can be used with the ST-CNN without an increase in computational cost due to downsampling to 224px after the transformers. 
-Right: The transformation predicted by the spatial transformers of 2×ST-CNN (top row) and 4×ST-CNN (bottom row) on the input image. Notably for the 2×ST-CNN, one of the transformers (shown in red) learns to detect heads, while the other (shown in green) detects the body, and similarly for the 4×ST-CNN.
+Table 3：左：CUB-200-2011鳥類分類データセットでの精度。2つの空間変換器(2×ST-CNN)と4つの空間変換器(4×ST-CNN)を並列に配置した空間変換器ネットワークがより高い精度を達成。 
+448pxの解像度の画像は、変換後に224pxにダウンサンプリングするため、計算コストの増加なしにST-CNNで使用できる。 
+右：2×ST-CNN(上段)と4×ST-CNN(下段)の空間変換器が入力画像に対して予測した変換。特に2×ST-CNNでは、Spatial Transformerの一方(赤で示す)は頭部を検出するように学習し、もう一方(緑で示す)は胴体を検出する。
 
 ## 5 Conclusion
 In this paper we introduced a new self-contained module for neural networks – the spatial transformer. 
