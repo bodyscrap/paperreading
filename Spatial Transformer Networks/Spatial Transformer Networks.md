@@ -318,75 +318,130 @@ Table 3：左：CUB-200-2011鳥類分類データセットでの精度。2つの
 右：2×ST-CNN(上段)と4×ST-CNN(下段)の空間変換器が入力画像に対して予測した変換。特に2×ST-CNNでは、Spatial Transformerの一方(赤で示す)は頭部を検出するように学習し、もう一方(緑で示す)は胴体を検出する。
 
 ## 5 Conclusion
-In this paper we introduced a new self-contained module for neural networks – the spatial transformer. 
-This module can be dropped into a network and perform explicit spatial transformations of features, opening up new ways for neural networks to model data, and is learnt in an end-to- end fashion, without making any changes to the loss function. 
-While CNNs provide an incredibly strong baseline, we see gains in accuracy using spatial transformers across multiple tasks, resulting in state-of-the-art performance. 
-Furthermore, the regressed transformation parameters from the spatial transformer are available as an output and could be used for subsequent tasks. 
-While we only explore feed-forward networks in this work, early experiments show spatial transformers to be powerful in recurrent models, and useful for tasks requiring the disentangling of object reference frames, as well as easily extendable to 3D transformations (see Appendix A.3).
+本稿では、ニューラルネットワークのための新しい自己完結型モジュール、Spatial Transformerを紹介する。 
+このモジュールはネットワークに組み込むことができ、特徴の明示的なSpatial Transformを実行することで、ニューラルネットワークがデータをモデル化する新しい方法を開くことができ、損失関数に変更を加えることなく、エンドツーエンドで学習される。 
+CNNは非常に強力なベースラインを提供する一方で、複数のタスクにわたってSpatial Transformerを使用することで精度が向上し、その結果、最先端の性能が得られる。 
+さらに、Spatial Transformerから回帰された変換パラメータは出力として利用でき、後続のタスクに利用できる。 
+この研究ではフィード・フォワード・ネットワークのみを探究しているが、初期の実験では、Spatial Transformerはリカレント・モデルにおいて強力であり、オブジェクトの参照フレームの分離を必要とするタスクに有用であり、また3D変換にも容易に拡張可能であることを示している(Appendix A.3参照)。
 
 ## A Appendix
-In this section we present the results of two further experiments – that of MNIST addition showing spatial transformers acting on multiple objects in Sect. A.1, and co-localisation in Sect. A.2 showing the application to semi-supervised scenarios. 
-In addition, we give an example of the extension to 3D in Sect. A.3. We also expand upon the details of the experiments from Sect. 4.1 in Sect. A.4, Sect. 4.2 in Sect. A.5, and Sect. 4.3 in Sect. A.6.
+本節では、さらに2つの実験の結果を紹介する。Section .A.1ではMNISTの追加、Section A.2では共局在化について述べる。
+Section A.2では半教師付きシナリオへの応用を示す。 
+さらに3Dへの拡張をSection A.3.にて示す。
+また、Section 4.1の実験の詳細をSection A.4で、Section 4.2の実験の詳細をA.5で、Section 4.3の実験の詳細をA.6で発展させる。
 
 ### A.1 MNIST Addition
-In this section we demonstrate another use case for multiple spatial transformers in parallel: 
-to model multiple objects. We define an MNIST addition task, where the network must output the sum of the two digits given in the input. 
-Each digit is presented in a separate 42 ×42 input channel (giving 2-channel inputs), but each digit is transformed independently, with random rotation, scale, and translation (RTS).
-We train fully connected (FCN), convolutional (CNN) and single spatial transformer fully connected (ST-FCN) networks, as well as spatial transformer fully connected networks with two parallel spatial transformers (2×ST-FCN) acting on the input image, each one taking both channels as input and transforming both channels. 
-The two 2-channel outputs of the two spatial transformers are concatenated into a 4-channel feature map for the subsequent FCN. As in Sect. 4.1, all networks have the same number of parameters, and are all trained with SGD to minimise the multinomial cross entropy loss for 19 classes (the possible addition results 0-18).
-The results are given in Table 4 (left). Due to the complexity of this task, the FCN reaches a minimum error of 47.7%, however a CNN with max-pooling layers is far more accurate with 14.7% error. 
-Adding a single spatial transformer improves the capability of an FCN by focussing on a single region of the input containing both digits, reaching 18.5% error. 
-However, by using two spatial transformers, each transformer can learn to focus on transforming the digit in a single channel (though receiving both channels as input), visualised in Table 4 (right). 
-The transformers co-adapt, producing stable representations of the two digits in two of the four output channels of the spatial transformers. 
-This allows the 2×ST-FCN model to achieve 5.8% error, far exceeding that of other models.
+このセクションでは、複数の空間変換器を並列に使用する別の使用例を示す：
+複数のオブジェクトをモデル化する。MNISTの足し算タスクを定義し、ネットワークは入力で与えられた2桁の数字の和を出力しなければならない。
+各桁は別々の42×42入力チャンネルで表示されるが(2チャンネル入力となる)、各桁は独立に変換され、ランダムな回転、スケール、平行移動(RTS)が行われる。
+我々は、全結合ネットワーク(FCN)、畳み込みネットワーク(CNN)、単一のSpatial Transformerをもつ全結合ネットワーク(ST-FCN)、および入力画像に作用する2つのSpatial Transformerをもつ全結合ネットワーク(2×ST-FCN)を訓練する。
+入力に2つのチャネルを持ち、どちらのチャネルも変換を行う。」
+2つの空間変換器の2チャンネル出力は、後続のFCNのための4チャンネル特徴マップに連結される。
+Section 4.1と同様に、全てのネットワークは同じ数のパラメータを持ち、19クラス(取りうる加算の結果は0-18)に対して多項式クロスエントロピー損失を最小化するようにSGDで学習される。
+結果をTable 4(左)に示す。
+このタスクの複雑さのため、FCNは最小誤差47.7%に達するが、max-pooling層を持つCNNは14.7%の誤差ではるかに正確である。
+1つの空間変換器を追加すると、両桁を含む入力の単一領域に焦点を当てることでFCNの能力が向上し、誤差は18.5%に達する。
+しかし、2つのSpatial Transformerを使用することで、各変換器は(両方のチャネルを入力として受け取りながらも)1つのチャネルの数字を変換することに集中するように学習することができる。これはTable 4(右)にて可視化される。
+Transformerは共適応し、Spatial Transformerの4つの出力チャンネルのうち2つのチャンネルで、2桁の安定した表現を作り出す。
+これにより、2×ST-FCNモデルは5.8％の誤差を達成し、他のモデルを大きく上回る。
 
 ![Table4](images/Table4.png)
-Table 4: Left: The percentage error for the two digit MNIST addition task, where each digit is transformed independently in separate channels, trained by supplying only the label of the sum of the two digits. 
-The use of two spatial transformers in parallel, 2×ST-FCN, allows the fully-connected neural network to become invariant to the transformations of each digit, giving the lowest error. 
-All the models used for each column have approximately the same number of parameters. 
-Right: A test example showing the learnt behaviour of each spatial transformer (using a thin plate spline (TPS) transformation). 
-The 2-channel input (the blue bar denotes separation between channels) is fed to two independent spatial transformers, ST1 and ST2, each of which operate on both channels. 
-The outputs of ST1 and ST2 and concatenated and used as a 4-channel input to a fully connected network (FCN) which predicts the addition of the two original digits. 
-During training, the two spatial transformers co-adapt to focus on a single channel each.
+Table 4：左：2桁のMNIST足し算タスクのエラー率。各桁は別々のチャンネルで独立に変換され、2桁の合計のラベルのみを与えて学習。 
+2つの空間変換器(2×ST-FCN)を並列に使用することで、全結合ニューラルネットワークが各桁の変換に対して不変となり、最も誤差が小さくなる。
+各列に使用されたモデルはすべて、ほぼ同じ数のパラメーターを持っている。
+右：各空間変換器の学習された挙動を示すテスト例(thin plate spline(TPS)変換を使用)。
+2チャンネルの入力(青いバーはチャンネル間の分離を示す)は、2つの独立したSpatial Transformer、ST1とST2に供給され、それぞれ両チャンネルで動作する。 
+ST1とST2の出力は連結され、元の2桁の足し算を予測する完全連結ネットワーク(FCN)への4チャンネル入力として使用される。 
+訓練中、2つのSpatial Transformerはそれぞれ1つのチャンネルに集中するように共同適応する。
 
 ### A.2 Co-localisation
-In this experiment, we explore the use of spatial transformers in a semi-supervised scenario – co-localisation. 
-The co-localisation task is as follows: given a set of images that are assumed to contain instances of a common but unknown object class, localise (with a bounding box) the common object.
-Neither the object class labels, nor the object location ground truth is used for optimisation, only the set of images.
-To achieve this, we adopt the supervision that the distance between the image crop corresponding to two correctly localised objects is smaller than to a randomly sampled image crop, in some embedding space. 
-For a dataset $\mathcal{I} = {I_n}$ of N images, this translates to a triplet loss, where we minimise the hinge loss
+この実験では、半教師付きシナリオである共同ローカライゼーションにおける空間変換器の使用を探求する。
+共同ローカライゼーションのタスクは以下の通り：
+共通の、しかし未知のオブジェクトクラスのインスタンスを含むと仮定された画像セットが与えられた場合、共通のオブジェクトを(バウンディングボックスを用いて)ローカライズする。
+オブジェクトのクラスラベルも、オブジェクトの位置のグランドトゥルースも、最適化には使われず、画像の集合だけが使われる。 
+これを達成するために、ある埋め込み空間において、2つの正しくローカライズされたオブジェクトに対応する画像クロップ間の距離が、ランダムにサンプリングされた画像クロップ間の距離よりも小さいという監視を採用する。
+N枚の画像からなるデータセット $\mathcal{I} = {I_n}$ の場合、これはトリプレット損失(triplet loss)に変換される。
 
 $$
 \sum^N_n \sum^M_{m\ne n} \max(0, \| c(I^{\Tau}_n) -c(I^{\Tau}_m)\|^2_2 ^ \|c(I^{\Tau}_n) -c(I^{rand}_m)\|^2_2 + \alpha)
 $$
 
-where $I^{\Tau}_n$ is the image crop of In corresponding to the localised object, Irandn is a randomly sampled patch from $I_n$ , $e()$ is an encoding function and α is a margin. 
-We can use a spatial transformer to act as the localiser, such that $I^{\Tau}_n = T_\theta(I_n)$ where $\theta = f_{loc}(I_n)$ , interpreting the parameters of the transformation $\theta$ as the bounding box of the object. 
-We can minimise this with stochastic gradient descent, randomly sampling image pairs $(n,m)$.
-We perform co-localisation on translated (T), and also translated and cluttered (TC) MNIST images.
-Each image, a $28\tiems 28$ pixel MNIST digit, is placed in a uniform random location in a $84 \times 84$ black background image. 
-For the cluttered dataset, we also then add 16 random 6 ×6 crops sampled from the original MNIST training dataset, creating distractors. For a particular co-localisation optimisation, we pick a digit class and generate 100 distorted image samples as the dataset for the experiment. 
-We use a margin α = 1, and for the encoding function e() we use the CNN trained for digit classification from Sect. 4.1, concatenating the three layers of activations (two hidden layers and the classification layer without softmax) to form a feature descriptor. 
-We use a spatial trans- former parameterised for attention (scale and translation) where the localisation network is a 100k parameter CNN consisting of a convolutional layer with eight 9 ×9 filters and a 4 pixel stride, followed by 2 ×2 max pooling with stride 2 and then two 8-unit fully-connected layers before the final 3-unit fully-connected layer.
-The results are shown in Table 5. We measure a digit to be correctly localised if the overlap (area of intersection divided by area of union) between the predicted bounding box and groundtruth bounding box is greater than 0.5. Our co-localisation framework is able to perfectly localise MNIST digits without any clutter with 100% accuracy, and correctly localises between 75-93% of digits when there is clutter in the images. An example of the optimisation process on a subset of the dataset for “8” is shown in Fig. 4. 
-This is surprisingly good performance for what is a simple loss function derived from simple intuition, and hints at potential further applications in tracking problems.
+ここで、 $I^{\Tau}_n$ はローカライズされたオブジェクトに対応する $I_n$ の画像クロップ、$I^{rand}_n$ は $I_n$ からランダムにサンプリングされたパッチ、$e()$ はエンコーディング関数、$\alpha$ はマージンである。
+$I^{\Tau}_n = T_\theta(I_n)$ ここで、 $\theta = f_{loc}(I_n)$  、変換のパラメータ $\theta$ をオブジェクトのバウンディング・ボックスと解釈する。
+これを確率的勾配降下法で最小化し、画像ペア $(n,m)$ をランダムにサンプリングする。
+翻訳された（T）画像と、翻訳され乱雑になった（TC）MNIST画像に対して共局在化を行う。
+各画像は、 $28 \times 28$ ピクセルの MNIST 数字であり、$84 \times 84$ 個の黒背景画像の均一なランダム位置に配置される。
+乱雑なデータセットには、元のMNIST訓練データセットからサンプリングしたランダムな $6\times 6$ のクロップを16枚追加し、ディストラクターを作成する。 
+特定の共定位最適化のために、数字クラスを選び、100個の歪んだ画像サンプルを実験用データセットとして生成する。 
+マージン $\alpha = 1$ を使用し、符号化関数 $e()$ にはSect.4.1で学習したCNNを使用し、3層の活性化層(2つの隠れ層とsoftmaxなしの分類層)を連結して特徴記述子を形成する。
+注意(スケールと平行移動)のためにパラメータ化されたSpatial Transformerを使用し、localisationネットワークは、8つの $9\times 9$ フィルタと4ピクセルのストライドを持つ畳み込み層、ストライド2の $2\times 2$の max-pooling、そして最後の3ユニット全結合層の前の2つの8ユニット全結合層で構成される100kパラメータのCNNである。
+結果をTable 5に示す。
+予測されたバウンディングボックスと正解のバウンディングボックスの重なり(交差の面積を結合の面積で割ったもの)が0.5より大きい場合、その数字が正しくローカライズされていると判断する。 
+我々のco-localisationフレームワークは、100%の精度で乱雑さのないMNISTの数字を完璧にローカライズすることができ、画像に乱雑さがある場合は75～93%の数字を正しくローカライズすることができる。 
+Figure 4に "8" のデータセットの部分集合に対する最適化処理の例を示す。
+これは、単純な直感から導かれた単純な損失関数であるにもかかわらず、驚くほど良い性能であり、追跡問題への更なる応用の可能性を示唆している。
 
 ![Table5](images/Table5.png)
-Table 5: Left: The percent of correctly co-localised digits for different MNIST digit classes, for just translated digits (T), and for translated digits with clutter added (TC). 
-Right: The optimisation architecture. We use a hinge loss to enforce the distance between the two outputs of the spatial transformer (ST) to be less than the distance to a random crop, hoping to encourage the spatial transformer to localise the common objects.
+Table5: 左: MNISTの異なる桁クラス、翻訳された桁(T)、およびクラッタが付加された翻訳された桁(TC)に対する、正しく共局在化された桁の割合。 
+右：最適化アーキテクチャ：最適化アーキテクチャ。SpatialTransformer(ST)の2つの出力間の距離がランダムクロップまでの距離より小さくなるようにヒンジ損失を用いて強制し、空間変換器が共通のオブジェクトをローカライズするように促す。
 
 ![Figure4](images/Figure4.png)
-Figure 4: A look at the optimisation dynamics for co-localisation. Here we show the localisation predicted by the spatial transformer for three of the 100 dataset images after the SGD step labelled below. 
-By SGD step 180 the model has process has correctly localised the three digits. 
-A full animation is shown in the video https://goo.gl/qdEhUu
+Figure 4：co-localisationの最適化ダイナミクス。
+ここでは、100枚のデータセットのうち3枚の画像について、SGDステップ後に空間変換器によって予測されたローカライゼーションを示している。 
+SGDステップ180までに、モデルは3桁の数字を正しくローカライズしています。 
+完全なアニメーションは、ビデオ(https://goo.gl/qdEhUu)に示されている。
 
 ### A.3 Higher Dimensional Transformers
-The framework described in this paper is not limited to 2D transformations and can be easily extended to higher dimensions. 
-To demonstrate this, we give the example of a spatial transformer capable of performing 3D affine transformations.
+本稿で説明するフレームワークは、2次元変換に限定されるものではなく、より高い次元に簡単に拡張することができる。 
+このことを示すために、3次元アフィン変換が可能な空間変換器の例を挙げる。
+我々は、Section .3.3の微分可能な画像サンプリングを拡張して、3Dバイリニアサンプリングを行う。
+(5)の3D等式は次のようになる。
+
+$$
+V^c_i = \sum^H_n \sum^W_m \sum^d_l U^c_{nml}\max(0, 1 - |x^s_i - m|)\max(0, 1 - |y^s_i - n|)\max(0, 1 - |z^s_i - l|) \tag{9}
+$$
+
+for the 3D input $U \in \mathcal{R}^{H\times W\times D\times C}$ and output $V \in \mathcal{R}^{H'\times W' \times D'\times C}$ , where $H', W'$, and $D'$ are the height, width and depth of the grid, and $C$ is the number of channels. 
+Similarly to the 2D sampling grid in Sect. 3.2, the source coordinates that define the sampling points, $(x^s_i,y^s_i ,z^s_i)$ can be generated by the transformation of a regular 3D grid $G = {G_i}$ of voxels $G_i = (x^t_i,y^t_i,z^t_i)$. 
+For a 3D affine transformation this is
+
+$$
+\left(
+    \begin{aligned}
+    x^s_i\\
+    y^s_i\\
+    z^s_i
+    \end{aligned}
+\right) =  
+\left[
+    \begin{aligned}
+    \theta_{11}\ \theta_{12}\ \theta_{13}\ \theta_{14}\\
+    \theta_{21}\ \theta_{22}\ \theta_{23}\ \theta_{24}\\
+    \theta_{31}\ \theta_{32}\ \theta_{33}\ \theta_{34}
+    \end{aligned}
+\right]
+\left(
+    \begin{aligned}
+    x^t_i\\
+    y^t_i\\
+    z^t_i\\
+    1
+    \end{aligned}
+\right) \tag{10}
+$$
+
+3DSpatial Transformerは、2DSpatial Transformerと同じように、ニューラルネットワークに組み込むことで、3D空間でデータをワープさせることができる。
+3D transformer のもう一つの興味深い使用法は、3Dの出力を1次元flattenし、3D空間の2Dへの射影を生成することである。たとえば$W^c_{nm} = \sum_l V^c_{nml}$, ここで$W \in \mathcal{R}^{H'\times W'\times C}$
+これにより、元の3Dデータをインテリジェントに2Dに投影し、その後の処理の次元と複雑さを大幅に減らすことができる。
+我々は、3次元の押し出されたMNISTの数字のデータセットの3次元オブジェクト分類のタスクでこれを実証した。
+タスクは、3D空間でランダムに平行移動と回転が行われた数字の3Dボクセルを入力とし、その数字のクラスを出力することである。
+その結果、3D空間変換ネットワークは、結果として得られる2D画像において、数字が中心となる3D空間の2D投影を作成するように学習し、残りのレイヤーが分類しやすいようにする。
+その一例をFigure 5に示す。
 
 ![Figure5](images/Figure5.png)
-Figure 5: The behaviour of a trained 3D MNIST classifier on a test example. 
-The 3D voxel input contains a random MNIST digit which has been extruded and randomly placed inside a 60 ×60 ×60 volume. 
-A 3D spatial transformer performs a transformation of the input, producing an output volume whose depth is then flattened. 
-This creates a 2D projection of the 3D space, which the subsequent layers of the network are able to classify. 
 The whole network is trained end-to-end with just classification labels.
+Figure 5：テスト例に対する学習済み3D MNIST分類器の動作。 
+3Dボクセル入力には、$60\times 60\times 60$ の体積内に押し出されランダムに配置されたランダムなMNISTの数字が含まれる。 
+3D空間変換器は入力の変換を行い、深さが平坦化された出力ボリュームを生成する。 
+これにより、3D空間の2D投影が作成され、ネットワークの後続層が分類できるようになる。 
+ネットワーク全体は、分類ラベルだけでend-to-endに学習される。
