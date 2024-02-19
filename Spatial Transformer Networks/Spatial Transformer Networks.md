@@ -482,34 +482,38 @@ ST-CNNシングルはCNNモデルの最初の畳み込み層の前に1つの 空
 ネットワークの重みはランダムに初期化するが、localisationネットワークの最後の回帰層は、同一性変換を回帰するように初期化する(重みがゼロ、同一性変換バイアス)。
 異なるランダムシードで2回のフルトレーニングを行い、1つのモデルで得られた平均精度を報告する。
 
+### A.6 Fine Grained Classification Details
+このセクションでは、我々のきめ細かな画像分類アーキテクチャをより詳細に説明する。 
+このタスクのために、我々は空間変換器を微分可能な注意メカニズムとして利用し、各変換器は自動的に識別可能な物体部分に注目するように学習することが期待される。 
+すなわち、各変換器は注目窓の位置$(x,y)$ を予測し、スケールは画像サイズの50％に固定される。
+変換器は入力画像から224×224クロップをサンプリングし、それぞれのクロップはそれ自身のCNNストリームによって記述され、マルチストリームアーキテクチャを形成する(Figure 6)。  
+ストリームの出力は1024-Dクロップ記述子であり、これらは連結され、200-wayソフトマックス分類器で分類される。 ネットワークの主要な構成要素として、バッチ正規化[18]を備えた最先端のInceptionアーキテクチャを利用し、ImageNetチャレンジ(ILSVRC)データセットで事前に訓練した。
+我々のモデルは、ILSVRC検証セットにおいて、1枚の画像の切り抜きで27.1%のトップ1エラーを達成した(最小辺が256になるようにリサイズされたシングルスケールの画像でのみ学習した)。 
+クロップ記述ネットワークは、Inceptionアーキテクチャを採用し、最後のレイヤ(1000-way ILSVRC分類器)を削除することで、出力は1024-D記述子となる。
+localisationネットワークは、すべてのトランスフォーマーで共有され、以下の方法でInceptionから導き出された。 
+ILSVRC分類層とは別に、空間情報を保持するために最後のプーリング層も削除した。 
+この切り捨てられたInceptionネットの出力は、7×7の空間分解能と1024の特徴チャンネルを持つ。
+
+その上に、変形を予測するための3つのウェイトレイヤーを加えた：
+(i) 1×1畳み込み層で、特徴チャンネル数を1024から128に減らす；
+(ii) 128-D出力を持つ全結合層；
+(iii) 2N-D出力を持つ全結合層。Nはtransformerの数である（N = 2とN = 4で実験した）。
+
+パラメータの数と計算時間の観点から、アーキテクチャを最適化する努力はしていないことに注意されたい。 
+我々の目的は、空間変換ネットワークが画像ラベルだけで学習した場合に、意味のあるオブジェクト部分を自動的に発見できるかどうかを調べることであり、これは定量的にも定性的にも確認された(Section 4.3節)。
+モデルはSGD（バッチサイズ256）で30k反復学習され、初期学習率は0.1、10k、20k、25k反復後に10分の1に減少された。 
+安定性のため、localisationネットワークの学習率は基本学習率に $10^{-4}$ を乗じたものとした。
+重みの減衰は $10^{-5}$ に設定し、200種別の分類層の前に0.7のドロップアウトを使用した。 
+Spatial Transformerの入力画像サイズは224×224と448×448の2種類を評価した。
+後者の場合、localisationネットの前に固定2×ダウンスケーリング層を追加し、入力が224 ×224のままとなるようにした。
+この2つの設定の違いは、サンプリングを行う画像のサイズにあり(224対448)、小規模な作物のサンプリングには448の方が適している。 
+変換器の出力は、どちらの場合も224×224の作物である(作物記述Inceptionネットと互換性があるように)。
+学習時には、ランダム・サンプリング(256 ×S から224 ×224、512 ×S から448 ×448(Sは最大の画像辺))と水平反転という形で、従来の増大を利用した。 
+localisationネットは、Spatial Transformer cropsで画像平面をタイル化するように初期化された。 
+我々はまた、より複雑な変換(アフィンだけでなく、位置とスケール)でも実験したが、同様の結果が観察された。 
+これは、学習セットのサイズが非常に小さい(6k画像、200クラス)ためと考えられ、すべての学習シナリオで重度のオーバーフィッティングに気づきました。
+ハイパーパラメータは、訓練セットに対する交差検証によって推定された。
+
 ![Figure6](images/Figure6.png)
 Figure 6：鳥の分類に使われた2×ST-CNN 448pxのアーキテクチャ。
 単一の局在化ネットワーク $f_{loc}$ は、2つの変換パラメータ $\theta_1$ と $\theta_2$ を予測し、それに続く変換 $\Tau_{\theta_1}$ と $\Tau_{\theta_2}$ が元の入力画像に適用される。
-
-### A.6 Fine Grained Classification Details
-In this section we describe our fine-grained image classification architecture in more detail. 
-For this task, we utilise the spatial transformers as a differentiable attention mechanism, where each transformer is expected to automatically learn to focus on discriminative object parts. 
-Namely, each transformer predicts the location (x,y) of the attention window, while the scale is fixed to 50% of the image size. 
-The transformers sample 224 ×224 crops from the input image, each of which is then described each by its own CNN stream, thus forming a multi-stream architecture (shown in Fig. 6).  
-The outputs of the streams are 1024-D crop descriptors, which are concatenated and classified with a 200-way softmax classifier.
-As the main building block of our network, we utilise the state-of-the-art Inception architecture with batch normalisation [18], pre-trained on the ImageNet Challenge (ILSVRC) dataset. 
-Our model achieves 27.1% top-1 error on the ILSVRC validation set using a single image crop (we only trained on single-scale images, resized so that the smallest side is 256). 
-The crop description networks employ the Inception architecture with the last layer (1000-way ILSVRC classifier) removed, so that the output is a 1024-D descriptor.
-The localisation network is shared across all the transformers, and was derived from Inception in the following way. 
-Apart from the ILSVRC classification layer, we also removed the last pooling layer to preserve the spatial information. 
-The output of this truncated Inception net has 7 ×7 spatial resolution and 1024 feature channels. 
-On top of it, we added three weight layers to predict the transformations: 
-(i) 1 ×1 convolutional layer to reduce the number of feature channels from 1024 to 128; 
-(ii) fully-connected layer with 128-D output; 
-(iii) fully-connected layer with 2N-D output, where N is the number of transformers (we experimented with N = 2 and N = 4).
-We note that we did not strive to optimise the architecture in terms of the number of parameters and the computation time. 
-Our aim was to investigate whether spatial transformer networks are able to automatically discover meaningful object parts when trained just on image labels, which we confirmed both quantitatively and qualitatively (Sect. 4.3).
-The model was trained for 30k iterations with SGD (batch size 256) with an initial learning rate of 0.1, reduced by a factor of 10 after 10k, 20k, and 25k iterations. 
-For stability, the localisation network’s learning rate is the base learning rate multiplied by 10−4. 
-Weight decay was set at 10−5 and dropout of 0.7 was used before the 200-way classification layer.
-We evaluated two input images sizes for the spatial transformers: 224 ×224 and 448 ×448. In the latter case, we added a fixed 2× downscaling layer before the localisation net, so that its input is still 224 ×224. 
-The difference between the two settings lies in the size of the image from which sampling is performed (224 vs 448), with 448 better suited for sampling small-scale crops. 
-The output of the transformers are 224 ×224 crops in both cases (so that they are compatible with crop description Inception nets). When training, we utilised conventional augmentation in the form of random sampling (224 ×224 from 256 ×S and 448 ×448 from 512 ×S where S is the largest image side) and horizontal flipping. 
-The localisation net was initialised to tile the image plane with the spatial transformer crops.
-We also experimented with more complex transformations (location and scale, as well as affine), but observed similar results. This can be attributed to the very small size of the training set (6k images, 200 classes), and we noticed severe over-fitting in all training scenarios. 
-The hyper-parameters were estimated by cross-validation on the training set.
