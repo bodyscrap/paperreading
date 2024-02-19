@@ -35,10 +35,6 @@ Spatial TransformerをCNNに組み込むことで、例えば次のような様�
 Sect. 2で我々の研究に関連するいくつかの研究について述べ、Sect. 3で空間変換器の定式化と実装を紹介し、最後にSect.4.追加の実験を示し、実装の詳細は付録Aに示す。
 
 ![Figure1](images/Figure1.png)
-(b) The localisation network of the spatial transformer predicts a transformation to apply to the input image. 
-(c) The output of the spatial transformer, after applying the transformation.
-(d) The classification prediction produced by the subsequent fully-connected network on the output of the spatial transformer. 
-The spatial transformer network (a CNN including a spatial transformer module) is trained end-to-end with only class labels – no knowledge of the groundtruth transformations is given to the system.
 
 Figure 1：歪んだMNISTの数字を分類するために訓練された全結合ネットワークの第1層としてSpatial Transformerを使用した結果。 
 (a) Spatial Transformerネットワークへの入力は、ランダムな平行移動、スケール、回転、乱雑さで、ゆがまされたMNISTの数字の画像である。 
@@ -48,21 +44,21 @@ Figure 1：歪んだMNISTの数字を分類するために訓練された全結�
 空間変換器ネットワーク（空間変換器モジュールを含むCNN）は、クラスラベルのみを用いてエンドツーエンドで学習される。
 
 ## 2 Related Work
-In this section we discuss the prior work related to the paper, covering the central ideas of modelling transformations with neural networks [15, 16, 36], learning and analysing transformation-invariant representations [4, 6, 10, 20, 22, 33], as well as attention and detection mechanisms for feature selection [1, 7, 11, 14, 27, 29].
-Early work by Hinton [15] looked at assigning canonical frames of reference to object parts, a theme which recurred in [16] where 2D affine transformations were modeled to create a generative model composed of transformed parts. 
-The targets of the generative training scheme are the transformed input images, with the transformations between input images and targets given as an additional input to the network. 
-The result is a generative model which can learn to generate transformed images of objects by composing parts. 
-The notion of a composition of transformed parts is taken further by Tieleman [36], where learnt parts are explicitly affine-transformed, with the transform predicted by the network. 
-Such generative capsule models are able to learn discriminative features for classification from transformation supervision.
-The invariance and equivariance of CNN representations to input image transformations are studied in [22] by estimating the linear relationships between representations of the original and transformed images. 
-Cohen & Welling [6] analyse this behaviour in relation to symmetry groups, which is also exploited in the architecture proposed by Gens & Domingos [10], resulting in feature maps that are more invariant to symmetry groups. 
-Other attempts to design transformation invariant representa- tions are scattering networks [4], and CNNs that construct filter banks of transformed filters [20, 33].  
-Stollenga et al. [34] use a policy based on a network’s activations to gate the responses of the network’s filters for a subsequent forward pass of the same image and so can allow attention to specific features. 
-In this work, we aim to achieve invariant representations by manipulating the data rather than the feature extractors, something that was done for clustering in [9].
-Neural networks with selective attention manipulate the data by taking crops, and so are able to learn translation invariance. 
-Work such as [1, 29] are trained with reinforcement learning to avoid the  need for a differentiable attention mechanism, while [14] use a differentiable attention mechansim by utilising Gaussian kernels in a generative model. 
-The work by Girshick et al. [11] uses a region proposal algorithm as a form of attention, and [7] show that it is possible to regress salient regions with a CNN. 
-The framework we present in this paper can be seen as a generalisation of differentiable attention to any spatial transformation.
+このセクションでは、ニューラルネットワークによる変換のモデル化[15, 16, 36]、変換不変表現の学習と分析[4, 6, 10, 20, 22, 33]、特徴選択のための注意と検出メカニズム[1, 7, 11, 14, 27, 29]など、この論文に関連する先行研究について述べる。
+Hinton [15]による初期の研究は、オブジェクトのパーツに正準参照フレームを割り当てることに着目したもので、このテーマは[16]でも繰り返され、2Dアフィン変換が変換されたパーツからなる生成モデルを作成するためにモデル化された。
+生成学習スキームのターゲットは変換された入力画像であり、入力画像とターゲット間の変換はネットワークへの追加入力として与えられる。 
+その結果、パーツを合成することでオブジェクトの変換画像を生成することを学習できる生成モデルが得られる。
+変換された部分の合成という概念は、Tieleman [36]によってさらに推し進められ、学習された部分は明示的にアフィン変換され、変換はネットワークによって予測される。 
+このような生成的カプセルモデルは、変換の監視から分類のための識別特徴を学習することができる。
+入力画像の変換に対するCNN表現の不変性と等変量性は、原画像と変換画像の表現間の線形関係を推定することによって、[22]で研究されている。
+Cohen と Welling [6]は、この振る舞いを対称群との関係で分析し、Gens と Domingos [10]が提案したアーキテクチャでもこれを利用し、対称群に対してより不変な特徴マップを実現している。
+変換に不変な表現を設計する他の試みは、散乱ネットワーク [4]、変換されたフィルタのフィルタバンクを構築するCNN [20, 33]である。  
+Stollengaら[34]は、同じ画像の後続のフォワード・パスに対して、ネットワークのフィルタの応答をゲートするために、ネットワークの活性に基づくポリシーを使用する。
+この研究では、[9]でクラスタリングのために行われたような、特徴抽出器ではなくデータを操作することによって不変表現を達成することを目指している。 
+選択的注意を持つニューラルネットワークは、クロップをすることによってデータを操作するため、平行移動不変性を学習することができる。 
+一方、[14]は生成モデルでガウシアンカーネルを利用することで、微分可能な注意メカニズムを使用している。
+Girshickらによる研究 [11]は、注意の一形態として領域提案アルゴリズムを使用し、[7]は顕著な領域をCNNで回帰することが可能であることを示している。 
+本稿で紹介するフレームワークは、あらゆる空間変換に対する微分可能な注意の一般化と見ることができる。
 
 ![Figure2](images/Figure2.png)
 Figure 2：Spatial Transformer モジュールのアーキテクチャ。 
@@ -237,22 +233,25 @@ Section 4.1では、まずMNIST手書きデータセットの歪んだバージ�
 MNISTの追加と共局在化の更なる実験は付録Aにある。
 
 ### 4.1 Distorted MNIST
-In this section we use the MNIST handwriting dataset as a testbed for exploring the range of transformations to which a network can learn invariance to by using a spatial transformer.
-We begin with experiments where we train different neural network models to classify MNIST data that has been distorted in various ways: 
-rotation (R), rotation, scale and translation (RTS), projective transformation (P), and elastic warping (E) – note that elastic warping is destructive and can not be inverted in some cases. 
-The full details of the distortions used to generate this data are given in Appendix A. 
-We train baseline fully-connected (FCN) and convolutional (CNN) neural networks, as well as networks with spatial transformers acting on the input before the classification network (ST-FCN and ST-CNN). 
-The spatial transformer networks all use bilinear sampling, but variants use different transformation functions: an affine transformation (Aff), projective transformation (Proj), and a 16-point thin plate spline transformation (TPS) [2]. 
-The CNN models include two max-pooling layers. 
-All networks have approximately the same number of parameters, are trained with identical optimisation schemes (backpropagation, SGD, scheduled learning rate decrease, with a multinomial cross entropy loss), and all with three weight layers in the classification network.
-The results of these experiments are shown in Table 1 (left). Looking at any particular type of distortion of the data, it is clear that a spatial transformer enabled network outperforms its counterpart base network. 
-For the case of rotation, translation, and scale distortion (RTS), the ST-CNN achieves 0.5% and 0.6% depending on the class of transform used for Tθ, whereas a CNN, with two max- pooling layers to provide spatial invariance, achieves 0.8% error. 
-This is in fact the same error that the ST-FCN achieves, which is without a single convolution or max-pooling layer in its network, showing that using a spatial transformer is an alternative way to achieve spatial invariance. 
-ST-CNN models consistently perform better than ST-FCN models due to max-pooling layers in ST-CNN providing even more spatial invariance, and convolutional layers better modelling local structure. 
-We also test our models in a noisy environment, on 60 ×60 images with translated MNIST digits and background clutter (see Fig. 1 third row for an example): an FCN gets 13.2% error, a CNN gets 3.5% error, while an ST-FCN gets 2.0% error and an ST-CNN gets 1.7% error.
-Looking at the results between different classes of transformation, the thin plate spline transformation (TPS) is the most powerful, being able to reduce error on elastically deformed digits by reshaping the input into a prototype instance of the digit, reducing the complexity of the task for the classification network, and does not over fit on simpler data e.g. R. 
-Interestingly, the transformation of inputs for all ST models leads to a “standard” upright posed digit – this is the mean pose found in the training data. In Table 1 (right), we show the transformations performed for some test cases where a CNN is unable to correctly classify the digit, but a spatial transformer network can. 
-Further test examples are visualised in an animation here https://goo.gl/qdEhUu
+このセクションでは、MNIST手書きデータセットをテストベッドとして使用し、Spatial Transformerを使用することでネットワークが不変性を学習できる変換の範囲を探索する。 
+まず、さまざまな方法で歪められたMNISTデータを分類するために、さまざまなニューラルネットワークモデルを訓練する実験から始める：
+回転(R)、回転・平行移動・スケール・(RTS)、射影変換(P)、弾性ワーピング(E) - 弾性ワーピングは破壊的で、場合によっては逆変換できないことに注意。 
+このデータを作成するために使用された歪みの詳細については、付録Aに記載されている。
+我々は、ベースラインの全結合ネットワーク(FCN)と畳み込み(CNN)ニューラルネットワーク、および分類ネットワークの前に入力に作用するSpatial Transformer を持つネットワーク(ST-FCNとST-CNN)を訓練する。
+Spatial Transformerネットワークはすべてバイリニア・サンプリングを使用するが、アフィン変換(Aff)、射影変換(Proj)、16点thin plate spline 変換(TPS)[2]といった異なる変換関数を使用する。 
+CNNモデルには2つのmax pooling層がある。
+すべてのネットワークはほぼ同じ数のパラメータを持ち、同一の最適化スキーム(バックプロパゲーション、SGD、多項式クロスエントロピー損失によるスケジュール学習率低下)で学習され、分類ネットワークにはすべて3つの重み層がある。
+これらの実験結果をTable 1(左)に示す。
+データのどのような特定のタイプの歪みを見ても、Spatial Transformerを有効にしたネットワークが、対応する基本ネットワークよりも優れていることは明らかである。
+回転、平行移動、スケール歪み(RTS)の場合、ST-CNNは $\Tau_\theta$ に使用される変換のクラスに応じて0.5％と0.6％を達成するのに対し、空間不変性を提供するために2つのmax-pooling層を持つCNNは0.8％の誤差を達成する。
+これは実際、ST-FCNが達成した誤差と同じであり、ST-FCNはネットワーク内に畳み込み層やマックスプーリング層を一つも持たず、空間変換器を使用することが空間不変性を達成する代替方法であることを示している。 
+ST-CNNモデルは、ST-FCNモデルよりも一貫して優れた性能を示すが、これはST-CNNのマックス・プーリング層が空間不変性をさらに高め、畳み込み層が局所構造をよりよくモデル化するためである。
+また、ノイズの多い環境で、MNISTの数字を翻訳した60×60の画像と背景の乱雑さを用いてモデルをテストした(例としてFiguire 1の3行目を参照)。
+FCNは13.2%、CNNは3.5%の誤差を得たが、ST-FCNは2.0%、ST-CNNは1.7%の誤差を得た。
+異なるクラスの変換間の結果を見ると、thin plate spline変換(TPS)が最も強力であり、入力を桁のプロトタイプインスタンスに再形成することで、弾性的に変形した桁の誤差を減らすことができ、分類ネットワークのタスクの複雑さを軽減し、Rなどの単純なデータでover fitしない。
+興味深いことに、すべてのSTモデルの入力を変換すると、「標準的な」直立ポーズの数字になる - これは訓練データで見つかった平均ポーズである。
+Table 1(右)には、CNNでは正しく分類できないが、Spatial Transformerネットワークでは正しく分類できるいくつかのテストケースに対して実行された変換を示す。
+さらなるテスト例は、こちらのアニメーション(https://goo.gl/qdEhUu)で見ることができる。
 
 ![Table1](images/Table1.png)
 Table 1: 
@@ -342,6 +341,44 @@ The 2-channel input (the blue bar denotes separation between channels) is fed to
 The outputs of ST1 and ST2 and concatenated and used as a 4-channel input to a fully connected network (FCN) which predicts the addition of the two original digits. 
 During training, the two spatial transformers co-adapt to focus on a single channel each.
 
+### A.2 Co-localisation
+In this experiment, we explore the use of spatial transformers in a semi-supervised scenario – co-localisation. 
+The co-localisation task is as follows: given a set of images that are assumed to contain instances of a common but unknown object class, localise (with a bounding box) the common object.
+Neither the object class labels, nor the object location ground truth is used for optimisation, only the set of images.
+To achieve this, we adopt the supervision that the distance between the image crop corresponding to two correctly localised objects is smaller than to a randomly sampled image crop, in some embedding space. 
+For a dataset $\mathcal{I} = {I_n}$ of N images, this translates to a triplet loss, where we minimise the hinge loss
+
+$$
+\sum^N_n \sum^M_{m\ne n} \max(0, \| c(I^{\Tau}_n) -c(I^{\Tau}_m)\|^2_2 ^ \|c(I^{\Tau}_n) -c(I^{rand}_m)\|^2_2 + \alpha)
+$$
+
+where $I^{\Tau}_n$ is the image crop of In corresponding to the localised object, Irandn is a randomly sampled patch from $I_n$ , $e()$ is an encoding function and α is a margin. 
+We can use a spatial transformer to act as the localiser, such that $I^{\Tau}_n = T_\theta(I_n)$ where $\theta = f_{loc}(I_n)$ , interpreting the parameters of the transformation $\theta$ as the bounding box of the object. 
+We can minimise this with stochastic gradient descent, randomly sampling image pairs $(n,m)$.
+We perform co-localisation on translated (T), and also translated and cluttered (TC) MNIST images.
+Each image, a $28\tiems 28$ pixel MNIST digit, is placed in a uniform random location in a $84 \times 84$ black background image. 
+For the cluttered dataset, we also then add 16 random 6 ×6 crops sampled from the original MNIST training dataset, creating distractors. For a particular co-localisation optimisation, we pick a digit class and generate 100 distorted image samples as the dataset for the experiment. 
+We use a margin α = 1, and for the encoding function e() we use the CNN trained for digit classification from Sect. 4.1, concatenating the three layers of activations (two hidden layers and the classification layer without softmax) to form a feature descriptor. 
+We use a spatial trans- former parameterised for attention (scale and translation) where the localisation network is a 100k parameter CNN consisting of a convolutional layer with eight 9 ×9 filters and a 4 pixel stride, followed by 2 ×2 max pooling with stride 2 and then two 8-unit fully-connected layers before the final 3-unit fully-connected layer.
+The results are shown in Table 5. We measure a digit to be correctly localised if the overlap (area of intersection divided by area of union) between the predicted bounding box and groundtruth bounding box is greater than 0.5. Our co-localisation framework is able to perfectly localise MNIST digits without any clutter with 100% accuracy, and correctly localises between 75-93% of digits when there is clutter in the images. An example of the optimisation process on a subset of the dataset for “8” is shown in Fig. 4. 
+This is surprisingly good performance for what is a simple loss function derived from simple intuition, and hints at potential further applications in tracking problems.
+
 ![Table5](images/Table5.png)
 Table 5: Left: The percent of correctly co-localised digits for different MNIST digit classes, for just translated digits (T), and for translated digits with clutter added (TC). 
 Right: The optimisation architecture. We use a hinge loss to enforce the distance between the two outputs of the spatial transformer (ST) to be less than the distance to a random crop, hoping to encourage the spatial transformer to localise the common objects.
+
+![Figure4](images/Figure4.png)
+Figure 4: A look at the optimisation dynamics for co-localisation. Here we show the localisation predicted by the spatial transformer for three of the 100 dataset images after the SGD step labelled below. 
+By SGD step 180 the model has process has correctly localised the three digits. 
+A full animation is shown in the video https://goo.gl/qdEhUu
+
+### A.3 Higher Dimensional Transformers
+The framework described in this paper is not limited to 2D transformations and can be easily extended to higher dimensions. 
+To demonstrate this, we give the example of a spatial transformer capable of performing 3D affine transformations.
+
+![Figure5](images/Figure5.png)
+Figure 5: The behaviour of a trained 3D MNIST classifier on a test example. 
+The 3D voxel input contains a random MNIST digit which has been extruded and randomly placed inside a 60 ×60 ×60 volume. 
+A 3D spatial transformer performs a transformation of the input, producing an output volume whose depth is then flattened. 
+This creates a 2D projection of the 3D space, which the subsequent layers of the network are able to classify. 
+The whole network is trained end-to-end with just classification labels.
