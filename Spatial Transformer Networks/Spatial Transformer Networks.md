@@ -445,3 +445,71 @@ Figure 5：テスト例に対する学習済み3D MNIST分類器の動作。
 3D空間変換器は入力の変換を行い、深さが平坦化された出力ボリュームを生成する。 
 これにより、3D空間の2D投影が作成され、ネットワークの後続層が分類できるようになる。 
 ネットワーク全体は、分類ラベルだけでend-to-endに学習される。
+
+### A.4 Distorted MNIST Details
+このセクションでは、Section 4.1 でのゆがめたMNISTの実験を発展させる。
+
+**Data.** 
+回転データセット(R)は、-90◦から+90◦の間で一様にサンプリングされたランダムな回転でMNIST訓練数字を回転させて生成した。
+回転・平行移動・拡大縮小データセット（RTS）は、MNISTの数字をランダムに+45◦と-45◦回転させ、数字を0.7から1.2の間でランダムに拡大縮小し、42×42の画像内のランダムな位置に配置することにより生成した。
+投影データセット(P)は、数字を0.75から1.0の間でランダムにスケーリングし、平均がゼロで標準偏差が5ピクセルの正規分布からサンプリングされた量だけMNISTの数字の各コーナーを引き伸ばすことによって生成された。
+弾性的に歪んだデータセット(E)は、0.75から1.0の間でランダムに桁をスケーリングし、画像上の規則的なグリッドに配置された薄い板状のスプラインの16個の制御点を、平均がゼロで標準偏差が1.5ピクセルの正規分布からサンプリングされた量だけランダムに不安定化することによって生成した。
+変換された乱雑なデータセット(TC)は、MNISTの数字を60×60の黒いキャンバスのランダムな位置に配置し、他の数字画像からランダムにサンプリングした6×6のパッチを画像のランダムな位置に挿入することで生成される。
+
+**Networks.** 
+すべてのネットワークは、整流された線形非線形とsoftmax分類器を使用している。
+すべてのFCNネットワークは、2つの隠れ全結合層と、それに続く分類層を持っている。
+すべてのCNNネットワークは、9×9畳み込み層(ストライド1、パディングなし)、ストライド2の2×2max-pooling層、それに続く7×7畳み込み層(ストライド1、パディングなし)、そして最後のクラス化層の前にストライド2のもう1つの2×2max-pooling層を持つ。
+すべての空間変換器(ST)対応ネットワークは、STモジュールをネットワークの先頭に配置し、ST-FCNネットワークでは32ユニットの完全連結層、2×ダウンサンプリングされた入力に作用する2つの20フィルター5×5畳み込み層(ストライド1、パディングなし)、畳み込み層間の2×2最大プーリング、および畳み込み層に続く20ユニットの完全連結層で、ローカライゼーションネットワークに3つの隠れ層を持つ。  
+TCデータセットとRTSデータセットのSpatial Transformerネットワークは、空間変換の後に平均プーリングを行い、分類ネットワークのために変換器の出力を2倍ダウンサンプリングする。  
+FCNとCNNベースの分類モデルの正確なユニット数は、特定の実験のすべてのネットワークが常に同じ数の学習可能なパラメータ(約400k)を含むようにするため、さまざまである。
+つまり、空間トランスネットワークは、一般的に、ローカリゼーションネットワークのパラメータが必要なため、分類ネットワークのパラメータが少なくなる。
+FCNは1層あたり128から256のユニットを持ち、CNNは1層あたり32から64のフィルターを持つ。
+
+**Training.** 
+すべてのネットワークはSGDで150k反復、同じハイパーパラメータ(バッチサイズ256、基本学習率0.01、重み減衰なし、ドロップアウトなし)、同じ学習率スケジュール(50k反復ごとに学習率を10分の1に減少)で学習させた。 
+ネットワークの重みはランダムに初期化するが、ローカライゼーション・ネットワークの最終回帰層は同一性変換を回帰するように初期化する(重みゼロ、同一性変換バイアス)。 
+すべてのモデルについて、異なるランダムシードで3回の完全な学習を行い、平均精度を報告する。
+
+### A.5 Street View House Numbers Details
+Section 4.2のSVHN実験では、[1, 13]に従い、学習セットから5k画像からハイパーパラメータを選択する。
+4.2のSVHN実験では、[1, 13]に従い、学習セットから5k画像からなる検証セットからハイパーパラメータを選択する。 
+すべてのネットワークはSGD（128バッチサイズ）で400k反復学習され、基本学習率は0.01で80k反復ごとに10分の1に減少させ、重み減衰は0.0005に設定し、最初の畳み込み層とローカリゼーションネットワークを除くすべての層でドロップアウトを0.5に設定した。  
+空間トランスネットワークのローカリゼーションネットワークの学習率は、基本学習率の10分の1に設定された。  
+conv[N,w,s,p]は、ストライドsとピクセルパディングpを持つ、サイズw×wのN個のフィルターを持つ畳み込み層、fc[N]はN個のユニットを持つ完全連結層、max[s]はストライドsを持つs×sの最大プーリング層という表記を採用する。
+CNNモデルはconv[48,5,1,2]-max[2]-conv[64,5,1,2]-conv[128,5,1,2]-max[2]-conv[160,5,1,2]-conv[192,5,1,2]-max[2]-conv[192,5,1,2]- conv[192,5,1,2]-max[2]-conv[192,5,1,2]-fc[3072]-fc[3072]-fc[3072],の5つの並列fc[11]と分類のためのソフトマックス層が続く([19]と同様)。
+ST-CNNシングルはCNNモデルの最初の畳み込み層の前に1つの 空間変換器（ST）を持ち、STのlocalisationネットワーク・アーキ テクチャは次のとおりである：conv[32,5,1,2]-max[2]-conv[32,5,1,2]-fc[32]-fc[32]。ST-CNNマルチは4つの空間変換器を持ち、CNNモデルの最初の4つの畳み込み層の前にそれぞれ1つずつ、単純なfc[32]-fc[32]localisationネットワークを持つ。
+ネットワークの重みはランダムに初期化するが、localisationネットワークの最後の回帰層は、同一性変換を回帰するように初期化する(重みがゼロ、同一性変換バイアス)。
+異なるランダムシードで2回のフルトレーニングを行い、1つのモデルで得られた平均精度を報告する。
+
+![Figure6](images/Figure6.png)
+Figure 6：鳥の分類に使われた2×ST-CNN 448pxのアーキテクチャ。
+単一の局在化ネットワーク $f_{loc}$ は、2つの変換パラメータ $\theta_1$ と $\theta_2$ を予測し、それに続く変換 $\Tau_{\theta_1}$ と $\Tau_{\theta_2}$ が元の入力画像に適用される。
+
+### A.6 Fine Grained Classification Details
+In this section we describe our fine-grained image classification architecture in more detail. 
+For this task, we utilise the spatial transformers as a differentiable attention mechanism, where each transformer is expected to automatically learn to focus on discriminative object parts. 
+Namely, each transformer predicts the location (x,y) of the attention window, while the scale is fixed to 50% of the image size. 
+The transformers sample 224 ×224 crops from the input image, each of which is then described each by its own CNN stream, thus forming a multi-stream architecture (shown in Fig. 6).  
+The outputs of the streams are 1024-D crop descriptors, which are concatenated and classified with a 200-way softmax classifier.
+As the main building block of our network, we utilise the state-of-the-art Inception architecture with batch normalisation [18], pre-trained on the ImageNet Challenge (ILSVRC) dataset. 
+Our model achieves 27.1% top-1 error on the ILSVRC validation set using a single image crop (we only trained on single-scale images, resized so that the smallest side is 256). 
+The crop description networks employ the Inception architecture with the last layer (1000-way ILSVRC classifier) removed, so that the output is a 1024-D descriptor.
+The localisation network is shared across all the transformers, and was derived from Inception in the following way. 
+Apart from the ILSVRC classification layer, we also removed the last pooling layer to preserve the spatial information. 
+The output of this truncated Inception net has 7 ×7 spatial resolution and 1024 feature channels. 
+On top of it, we added three weight layers to predict the transformations: 
+(i) 1 ×1 convolutional layer to reduce the number of feature channels from 1024 to 128; 
+(ii) fully-connected layer with 128-D output; 
+(iii) fully-connected layer with 2N-D output, where N is the number of transformers (we experimented with N = 2 and N = 4).
+We note that we did not strive to optimise the architecture in terms of the number of parameters and the computation time. 
+Our aim was to investigate whether spatial transformer networks are able to automatically discover meaningful object parts when trained just on image labels, which we confirmed both quantitatively and qualitatively (Sect. 4.3).
+The model was trained for 30k iterations with SGD (batch size 256) with an initial learning rate of 0.1, reduced by a factor of 10 after 10k, 20k, and 25k iterations. 
+For stability, the localisation network’s learning rate is the base learning rate multiplied by 10−4. 
+Weight decay was set at 10−5 and dropout of 0.7 was used before the 200-way classification layer.
+We evaluated two input images sizes for the spatial transformers: 224 ×224 and 448 ×448. In the latter case, we added a fixed 2× downscaling layer before the localisation net, so that its input is still 224 ×224. 
+The difference between the two settings lies in the size of the image from which sampling is performed (224 vs 448), with 448 better suited for sampling small-scale crops. 
+The output of the transformers are 224 ×224 crops in both cases (so that they are compatible with crop description Inception nets). When training, we utilised conventional augmentation in the form of random sampling (224 ×224 from 256 ×S and 448 ×448 from 512 ×S where S is the largest image side) and horizontal flipping. 
+The localisation net was initialised to tile the image plane with the spatial transformer crops.
+We also experimented with more complex transformations (location and scale, as well as affine), but observed similar results. This can be attributed to the very small size of the training set (6k images, 200 classes), and we noticed severe over-fitting in all training scenarios. 
+The hyper-parameters were estimated by cross-validation on the training set.
