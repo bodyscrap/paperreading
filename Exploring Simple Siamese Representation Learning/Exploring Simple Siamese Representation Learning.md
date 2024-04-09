@@ -374,40 +374,42 @@ $$
 :stop-gradientが適用されたsiamese ネットワーク。
 
 **Predictor** 
-Our above analysis does not involve the predictor $h$. 
-We further assume that $h$ is helpful in our method because of the approximation due to (10).
-By definition, the predictor $h$ is expected to minimize: $E_z\left[\|h(z_1) -z_2\|^2_2\right]$.
-The optimal solution to h should satisfy: $h(z_1)=E_z[z_2]=E_\Tau[f(\Tau(x))]$ for any image $x$. 
-This term is similar to the one in (9). 
-In our approximation in (10), the expectation $ET[\cdot]$ is ignored. 
-The usage of $h$ may fill this gap. 
-In practice, it would be unrealistic to actually compute the expectation $E_\Tau$. 
-But it may be possible for a neural network (e.g., the preditor $h$) to learn to predict the expectation, while the sampling of $\Tau$ is implicitly distributed across multiple epochs.
+上記の分析は予測変数 $h$ を含まない。
+さらに、(10)による近似のため、$h$は本手法において有用であると仮定する。
+定義により、予測変数 $h$ は次のように最小化することが期待される： $E_z\left[Γ|h(z_1) -z_2Γ|^2_2\right]$.
+$h$ の最適解は次を満たすべきである：任意の画像 $x$ に対して $h(z_1)=E_z[z_2]=E_\Tau[f( \Tau(x))]$.
+この項は(9)の項と似ている。
+(10)の近似では、期待値 $E_\Tau[\cdot]$ は無視される。
+$h$ の使い方はこのギャップを埋めるかもしれない。 
+実際には、期待値 $E_\Tau$ を実際に計算するのは非現実的である。
+しかし、ニューラルネットワーク(例えばプレディター $h$ )が、 $\Tau$ のサンプリングが暗黙のうちに複数のエポックに分散されている間に、期待値を予測することを学習することは可能かもしれない。
 
 **Symmetrization** 
-Our hypothesis does not involve symmetrization. 
-Symmetrization is like denser sampling $\Tau$ in (11). 
-Actually, the SGD optimizer computes the empirical expectation of $E_{x,\Tau}[\cdot]$ by sampling a batch of images and one pair of augmentations $(\Tau_1, \Tau_2)$. 
-In principle, the empirical expectation should be more precise with denser sampling. 
-Symmetrization supplies an extra pair $(\Tau_2, \Tau_1)$.
-This explains that symmetrization is not necessary for our method to work, yet it is able to improve accuracy, as we have observed in Sec. 4.6.
+我々の仮説は対称化を伴わない。 
+対称化とは、(11)の $\Tau$ をより密にサンプリングするようなものである。
+実際には、SGDオプティマイザは、画像のバッチと1組のaugmentation $( \Tau_1, \Tau_2)$ をサンプリングして、 $E_{x,\Tau}[\cdot]$ の経験的期待値を計算します。
+原理的には、サンプリングが密であればあるほど、経験的な期待値はより正確になるはずである。
+対称化により、余分なペア $(\Tau_2, \Tau_1)$ ができる。
+このことは、我々がSection 4.6で観察したように、対称化は我々の方法にとって必要ではなく、しかし精度を向上させることができることを説明している。
 
 ### 5.2. Proof of concept
-We design a series of proof-of-concept experiments that stem from our hypothesis. 
-They are methods different with SimSiam, and they are designed to verify our hypothesis.
-Multi-step alternation. 
-We have hypothesized that the SimSiam algorithm is like alternating between (7) and (8), with an interval of one step of SGD update. 
-Under this hypothesis, it is likely for our formulation to work if the interval has multiple steps of SGD.
-In this variant, we treat $t$ in (7) and (8) as the index of an outer loop; and the sub-problem in (7) is updated by an inner loop of $k$ SGD steps. 
-In each alternation, we pre-compute the $\eta_x$ required for all $k$ SGD steps using (10) and cache them in memory. 
-Then we perform $k$ SGD steps to update $\theta$. 
-We use the same architecture and hyper-parameters as SimSiam. 
+私たちは、私たちの仮説に由来する一連の概念実証実験をデザインする。 
+これらはSimSiamとは異なる手法であり、我々の仮説を検証するためのものである。
+
+**Multi-step alternation**  
+我々は、SimSiamアルゴリズムは、SGDの更新が1ステップの間隔で、(7)と(8)を交互に繰り返すようなものであるという仮説を立てた。 
+この仮説の下では、SGDが複数ステップ更新される区間であれば、我々の定式化が機能する可能性が高い。
+この変形では、(7)と(8)の $t$ を外側ループのインデックスとして扱い、(7)の部分問題を $k$ のSGDステップの内側ループによって更新する。 
+各交代において、全ての$k$ SGDステップに必要な$teta_x$を(10)を用いて事前計算し、メモリにキャッシュする。
+そして、$k$ SGDステップを実行して $\theta$ を更新する。
+SimSiamと同じアーキテクチャとハイパーパラメータを使用する。
 The comparison is as follows:
+
 ![t5_2_(1)](images/t5_2_(1).png)
-Here, "1-step" is equivalent to SimSiam, and “1-epoch” denotes the $k$ steps required for one epoch. 
-All multi-step variants work well. 
-The 10-/100-step variants even achieve better results than SimSiam, though at the cost of extra pre-computation. 
-This experiment suggests that the alternating optimization is a valid formulation, and SimSiam is a special case of it.
+ここで、"1-step "はSimSiamと等価であり、"1-epoch "は1エポックに必要な$k$ステップを表す。
+すべての多段階変法はうまくいく。 
+10ステップ/100ステップのバリエーションは、余分な事前計算の代償としてではあるが、SimSiamよりも良い結果さえ出している。
+この実験は、交互最適化が有効な定式化であり、SimSiamがその特殊なケースであることを示唆している。
 
 **Expectation over augmentations** 
 The usage of the predictor $h$ is presumably because the expectation $E_\Tau[\cdot]$ in (9) is ignored. 
