@@ -313,69 +313,72 @@ Swin-Transformer[35]で採用されているチャンク単位のretentionの方
 さらに、チャンク単位の保持とリカレント形式のretentionは、ビジョンバックボーンの並列性を乱し、推論速度を低下させる。
 
 **Inference Speed.**
-Talbe. 9では、RMTの推論速度を、最近最も性能の良いビジョンバックボーンと比較している。Table 9 では我々のRMTは速度と精度の最適なトレードオフを示している。
+Talbe. 9では、RMTの推論速度を、最近最も性能の良いvision バックボーンと比較している。Table 9 では我々のRMTは速度と精度の最適なトレードオフを示している。
 
 ## 5. Conclusion
-In this work, we propose RMT, a vision backbone with explicit spatial prior. 
-RMT extends the temporal decay used for causal modeling in NLP to the spatial level and introduces a spatial decay matrix based on the Manhattan distance. 
-The matrix incorporates explicit spatial prior into the Self-Attention. Additionally, RMT utilizes a Self-Attention decomposition form that can sparsely model global information without disrupting the spatial decay matrix. 
-The combination of spatial decay matrix and attention decomposition form enables RMT to possess explicit spatial prior and linear complexity. 
-Extensive experiments in image classification, object detection, instance segmentation, and semantic segmentation validate the superiority of RMT.
+本研究では、明示的な空間優先度を持つvisionバックボーンであるRMTを提案する。 
+RMTは、自然言語処理における因果モデリングに用いられる時間的減衰を空間レベルに拡張し、マンハッタン距離に基づく空間的減衰行列を導入する。 
+この行列は、明示的な空間的優先度分布をSelf-Attentionに組み込む。
+さらにRMTは、空間的減衰行列を乱すことなく、大域的情報を疎にモデル化できる自己注意の分解形式を利用する。 
+空間減衰行列と注意分解形式の組み合わせにより、RMTは明示的な空間事前分布を持ち、線形複雑性を持つことができる。 
+画像分類、物体検出、インスタンス分割、および意味分割における広範な実験により、RMTの優位性が検証された。
 
 ## A. Architecture Details
-Our architectures are illustrated in the Tab. 10. For convolution stem, we apply five 3 ×3 convolutions to embed the image into 56 ×56 tokens. 
-GELU and batch normalization are used after each convolution except the last one, which is only followed by batch normalization. 
-3 ×3 convolutions with stride 2 are used between stages to reduce the feature map’s resolution. 
-3 ×3 depth-wise convolutions are adopted in CPE. Moreover, 5 ×5 depth-wise convolutions are adopted in LCE. RMT-DeiT-S, RMT-Swin-T, and RMT-Swin-S are models that we used in our ablation experiments. 
-Their structures closely align with the structure of DeiT [49] and Swin-Transformer [35] without using techniques like convolution stem, CPE, and others.
+我々のアーキテクチャをTable. 10に示す。
+畳み込みステムでは、$56 \times 56$ 個のトークンに画像を埋め込むために、$3 \times×3$ の畳み込みを $5$ 回適用する。 
+GELUとバッチ正規化は、バッチ正規化のみを行う最後の畳み込み以外は、各畳み込みの後に使用する。 
+ストライド2の3×3畳み込みは、特徴マップの解像度を下げるためにステージ間で使用される。 
+CPEでは $3×3$ のdepth-wise畳み込みが採用されている。  
+また、LCE では 5×5 のdepth-wise畳み込みが採用されている。  
+RMT-DeiT-S、RMT-Swin-T、RMT-Swin-Sは、アブレーション実験で使用したモデルである。  
+これらの構造は、畳み込みステムやCPEなどの技術を使用せずに、DeiT[49]やSwin-Transformer[35]の構造と密接に一致している。
 
 ## B. Experimental Settings
+
 **ImageNet Image Classification.** 
-We adopt the same training strategy with DeiT [49] with the only supervision is the classification loss. 
-In particular, our models are trained from scratch for 300 epochs. 
-We use the AdamW optimizer with a cosine decay learning rate scheduler and 5 epochs of linear warm-up. 
-The initial learning rate, weight decay, and batch size are set to 0.001, 0.05, and 1024, respectively. 
-Our augmentation settings are RandAugment [8] (randm9-mstd0.5-inc1), Mixup [70] (prob=0.8), CutMix [69] (probe=1.0), Random Erasing [73] (prob=0.25) and Exponential Moving Average (EMA) [40].
-The maximum rates of increasing stochastic depth [24] are set to 0.1/0.15/0.4/0.5 for RMT-T/S/B/L, respectively. 
-For a more comprehensive comparison, we train two versions of the model. 
-The first version uses only classification loss as the supervision, while the second version, in addition to the classification loss, incorporates token labeling introduced by [27] for additional supervision. 
-Models using token labeling are marked with“*”.
+我々はDeiT [49]と同じ学習戦略を採用し、分類損失のみを監視している。  
+特に、我々のモデルは300エポックでゼロから学習される。  
+コサイン減衰学習率スケジューラと5エポックの線形ウォームアップを持つAdamWオプティマイザを使用する。 
+初期学習率、重み減衰、バッチサイズはそれぞれ0.001、0.05、1024に設定される。
+RandAugment[8] (randm9-mstd0.5-inc1)、Mixup[70] (prob=0.8)、CutMix[69] (probe=1.0)、Random Erasing[73] (prob=0.25)、Exponential Moving Average(EMA)[40]を用いている。 RMT-T/S/B/Lの確率的深さの最大増加率[24]はそれぞれ0.1/0.15/0.4/0.5に設定されている。 
+より包括的な比較のために、モデルの2つのバージョンを訓練する。 
+1つ目のバージョンは分類損失のみを指標として使用し、2つ目のバージョンは分類損失に加え、[27]によって導入されたトークン・ラベリングを追加の指標として組み込んだ。 
+トークン・ラベリングを用いたモデルには 「*」を付けている。
 
 **COCO Object Detection and Instance Segmentation.**
-We apply RetinaNet [32], Mask-RCNN [22] and Cascaded Mask-CNN [2] as the detection frameworks to conduct experiments. We implement them based on the MMDetection [4]. 
-All models are trained under two common settings:“1×” (12 epochs for training) and“3×+MS” (36 epochs with multi-scale augmentation for training). 
-For the “1×” setting, images are resized to the shorter side of 800 pixels. 
-For the “3×+MS”, we use the multi-scale training strategy and randomly resize the shorter side between 480 to 800 pixels. We apply AdamW optimizer with the initial learning rate of 1e-4. 
-For RetinaNet, we use the weight decay of 1e-4 for RetinaNet while we set it to 5e-2 for Mask-RCNN and Cascaded Mask-RCNN. For all settings, we use the batch size of 16, which follows the previous works [35, 63, 64].
+物体検出フレームワークとして、RetinaNet [32]、Mask-RCNN [22]、Cascaded Mask-CNN [2]を適用して実験を行う。
+これらはMMDetection [4]に基づいて実装されている。 
+すべてのモデルは、"1×"（12エポック学習）と "3×+MS"（36エポック学習とマルチスケール・オーグメンテーション）の2つの共通の設定で学習される。
+"1×"設定では、画像は800ピクセルの短辺にリサイズされる。 
+3×+MS "では、マルチスケール学習戦略を使用し、短辺を480から800ピクセルの間でランダムにリサイズする。AdamWオプティマイザを適用し、初期学習率は1e-4とする。 
+RetinaNetでは、重みの減衰を1e-4とし、Mask-RCNNとCascaded Mask-RCNNでは5e-2とする。全ての設定において、バッチサイズは16を使用し、これは過去の研究[35, 63, 64]に従う。
 
 **ADE20K Semantic Segmentation.** 
-Based on MMSegmentation [7], we implement UperNet [59] and Seman- ticFPN [28] to validate our models. 
-For UperNet, we follow the previous setting of Swin-Transformer [35] and train the model for 160k iterations with the input size of 512 ×512. 
-For SemanticFPN, we also use the input resolution of 512 ×512 but train the models for 80k iterations.
+MMSegmentation[7]をベースに、UperNet[59]とSemanticFPN[28]を実装し、モデルの検証を行う。 
+UperNetでは、以前のSwin-Transformer [35]の設定に従い、512 ×512の入力サイズで160k反復のモデル学習を行う。 
+SemanticFPNについては、同じく512 ×512の入力解像度を使用するが、モデルは80k iterationで訓練する。
 
 ## C. Efficiency Comparison
-We compare the inference speed of RMT with other backbones, as shown in Tab. 11. 
-Our models achieve the best trade-off between speed and accuracy among many competitors.
+Table 11に示すように、RMTの推論速度を他のバックボーンと比較した。  
+我々のモデルは、多くの競合他社の中で、速度と精度の間の最良のトレードオフを達成している。
 
 ## D. Details of Explicit Decay
-We use different $\gamma$ for each head of the multi-head ReSA to control the receptive field of each head, enabling the ReSA to perceive multi-scale information. 
-We keep all the $\gamma$ of ReSA’s heads within a certain range. Assuming the given receptive field control interval of a specific ReSA module is [a,b], where both a and b are positive real numbers. 
-And the total number of the ReSA module’s heads is N. 
-The $\gamma$ for its ith head can be written as Eq. 8:
+multi-head ReSAの各ヘッドに異なる $\gamma$ を用いて各ヘッドの受容野を制御し、ReSAがマルチスケール情報を知覚できるようにする。 
+ReSAのheadの全ての$\gamma$をある範囲内に保つ。
+特定のReSAモジュールの与えられた受容野制御間隔を[a,b]とする。 
+そして、ReSAモジュールのヘッドの総数は$N$であり、その$i$番目のヘッドの$\gamma$は式8のように書くことができる：
 
 $$
 \gamma_i = 1 - 2^{-a - \frac{(b-a)i}{N}}\tag{8}
 $$
 
-For different stages of different backbones, we use different values of a and b, with the details shown in Tab. 12.
+Table 12に示すように異なるバックボーンの異なるステージでは、異なる$a$と$b$の値を使用する。
 
 ![Table10](images/Table10.png)
-Table 10. Detailed Architectures of our models.
+Table 10.我々のモデルの詳細なアーキテクチャ。
 
 ![Table11](images/Table11.png)
-Table 11. Comparison of inference speed.
+Table 11.推論速度の比較
 
 ![Table12](images/Table12.png)
-Table 12. Details about the $\gamma$ decay.
-
-
+Table 12. $\gamma$ 減衰の詳細。
