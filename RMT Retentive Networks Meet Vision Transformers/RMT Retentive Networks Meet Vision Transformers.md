@@ -218,98 +218,102 @@ RMT-Bも同様のFLOPsでiFormer [45]を0.4%上回っています。
 
 ### 4.2. Object Detection and Instance Segmentation
 **Settings.** 
-We adopt MMDetection [4] to implement RetinaNet [32], Mask-RCNN [22] and Cascade Mask R-CNN [2]. 
-We use the commonly used “1×” (12 training epochs) setting for the RetinaNet and Mask R-CNN. 
-Besides, we use “3 ×+MS” for Mask R-CNN and Cascade Mask R-CNN. 
-Following [35], during training, images are resized to the shorter side of 800 pixels while the longer side is within 1333 pixels. 
-We adopt the AdamW optimizer with a learning rate of 0.0001 and batch size of 16 to optimize the model. 
-For the “1×” schedule, the learning rate declines with the decay rate of 0.1 at the epoch 8 and 11.
-While for the “3 ×+MS” schedule, the learning rate declines with the decay rate of 0.1 at the epoch 27 and 33.
+MMDetection[4]を採用し、RetinaNet[32]、Mask-RCNN[22]、Cascade Mask R-CNN[2]を実装する。 
+RetinaNetとMask R-CNNには、一般的に使用される 「1×」(12学習エポック)の設定を使用する。 
+また、マスクR-CNNとカスケードマスクR-CNNには 「3×+MS」を用いる。 
+[35]に従い、学習中、画像は短辺が800ピクセル、長辺が1333ピクセル以内にリサイズされる。 
+モデルを最適化するために、学習率0.0001、バッチサイズ16のAdamWオプティマイザを採用する。 
+「1×」ではエポック8と11で学習率が0.1ずつ低下し、「3×+MS」ではエポック27と33で学習率が0.1ずつ低下する。
 
 ![Table2](images/Table2.png)
-Table 2. Comparison to other backbones using RetinaNet and Mask R-CNN on COCO val2017 object detection and instance segmentation.
+Table 2.COCO val2017の物体検出とinstance segmentationにおけるRetinaNetとMask R-CNNを用いた他のバックボーンとの比較。
 
 ![Table3](images/Table3.png)
-Table 3. Comparison to other backbones using Mask R-CNN with ”3 ×+MS” schedule.
+Table3.マスクR-CNNを使用した「3×+MS」スケジュールによる他のバックボーンとの比較。
 
 ![Table4](images/Table4.png)
-Table 4. Comparison to other backbones using Cascade Mask R-CNN with ”3 ×+MS” schedule.
+Table 4.カスケードマスクR-CNNを使用した「3×+MS」スケジュールによる他のバックボーンとの比較。
 
 **Results.** 
-Tab. 2, Tab. 3 and Tab. 4 show the results with different detection frameworks. The results demonstrate that our RMT performs best in all comparisons. 
-For the RetinaNet framework, our RMT-T outperforms MPViT-XS by +1.3 AP, while S/B/L also perform better than other methods. 
-As for the Mask R-CNN with “1×” schedule, RMT-L outperforms the recent InternImage-B by +2.8 box AP and +1.9 mask AP. 
-For “3 × +MS” schedule, RMT-S outperforms InternImage-T for +1.6 box AP and +1.2 mask AP. 
-Besides, regarding the Cascade Mask R-CNN, our RMT still performs much better than other backbones. 
-All the above results tell that RMT outperforms its counterparts by evident margins.
+Table.2, Table.3、Table.4は異なる検出フレームワークを用いた結果を示している。  
+その結果、全ての比較において我々のRMTが最も優れていることがわかる。 
+RetinaNetフレームワークでは、我々のRMT-TはMPViT-XSを+1.3AP上回った。 
+「1×」スケジュールのマスクR-CNNに関しては、RMT-Lが最近のInternImage-BをボックスAPで+2.8、マスクAPで+1.9上回る。 
+「3×+MS」スケジュールでは、RMT-SはInternImage-TをボックスAPで+1.6、マスクAPで+1.2上回った。 
+その上、カスケードマスクR-CNNに関しては、我々のRMTは他のバックボーンよりはるかに良い性能を維持している。 
+以上の結果から、RMTは他のバックボーンより明らかに優れていることがわかる。
 
 ![Table5](images/Table5.png)
-Table 5. Comparison with the state-of-the-art on ADE20K.
+Table 5.ADE20Kにおける最先端技術との比較。
 
 ## 4.3. Semantic Segmentation
 **Settings.** 
-We adopt the Semantic FPN [28] and UperNet [59] based on MMSegmentation [7], apply RMTs which are pretrained on ImageNet-1K as backbone. 
-We use the same setting of PVT [53] to train the Semantic FPN, and we train the model for 80k iterations. 
-All models are trained with the input resolution of 512 ×512. 
-When testing the model, we resize the shorter side of the image to 512 pixels. 
-As for UperNet, we follow the default settings in Swin [35]. 
-We take AdamW with a weight decay of 0.01 as the optimizer to train the models for 160K iterations. 
-The learning rate is set to 6×10−5 with 1500 iterations warmup.
+MMSegmentation[7]に基づくSemantic FPN[28]とUperNet[59]を採用し、ImageNet-1Kで事前学習したRMTをバックボーンとして適用する。 
+Semantic FPNの学習にはPVT[53]と同じ設定を用い、80k回の反復学習を行っている。 
+全てのモデルは入力解像度512 ×512で学習される。 
+モデルをテストする際には、画像の短辺を512ピクセルにリサイズする。 
+UperNetに関しては、Swin[35]のデフォルト設定に従う。 
+オプティマイザとしてAdamWを用い、重み減衰を0.01として、160K反復のモデル学習を行う。 
+学習率は6×10-5に設定し、1500回のウォームアップを行う。
 
 **Results.** 
-The results of semantic segmentation can be found in Tab. 5. 
-All the FLOPs are measured with the resolution of 512 ×2048, except the group of RMT-T, which are measured with the resolution of 512 × 512. 
-All our models achieve the best performance in all comparisons.  
-Specifically, our RMT-S exceeds Shunted-S for +1.2 mIoU with Semantic FPN. 
-Moreover, our RMT-B outperforms the recent InternImage-S for +1.8 mIoU. 
-All the above results demonstrate our model’s superiority in dense prediction.
+semantic segmentationの結果をTable 5に示す。
+すべてのFLOPは512 × 2048の解像度で測定されているが、RMT-Tのグループは512 × 512の解像度で測定されている。 
+すべての比較において、我々のモデルは最高の性能を達成している。  
+特に、RMT-SはSemantic FPNで+1.2mIoUのShunted-Sを上回った。 
+さらに、我々のRMT-Bは最近のInternImage-Sを+1.8mIoUで上回った。 
+以上の結果はすべて、我々のモデルがdenseな推定において優れていることを示している。
 
 ## 4.4. Ablation Study
 **Strict comparison with previous works.** 
-In order to make a strict comparison with previous methods, we align RMT’s hyperparameters (such as whether to use hierarchical structure, the number of channels in the four stages of the hierarchical model, whether to use positional encoding and convolution stem, etc.) of the overall architecture with DeiT [49] and Swin [35], and only replace the Self-Attention/Window Self-Attention with our MaSA. 
-The comparison results are shown in Tab. 6, where RMT significantly outperforms DeiT-S, Swin-T, and Swin-S.  MaSA. 
-We verify the impact of Manhattan Self-Attention on the model, as shown in the Tab. 6. 
-MaSA improves the model’s performance in image classification and downstream tasks by a large margin. 
-Specifically, the classification accuracy of MaSA is 0.8% higher than that of vanilla attention.
+先行手法との厳密な比較を行うために、全体アーキテクチャのRMTのハイパーパラメータ(階層構造を使用するかどうか、階層モデルの4つのステージのチャネル数、位置エンコードと畳み込みステムを使用するかどうかなど)をDeiT [49]とSwin [35]に合わせ、Self-Attention/Window Self-Attentionのみを我々のMaSAに置き換えた。
+比較結果をTalbe 6に示す。 Table 6では、RMTがDeiT-S、Swin-T、Swin-Sを大きく上回っている。  
+
+**MaSA** 
+表6に示すように、Manhattan Self-Attentionがモデルに与える影響を検証する。  
+MaSAは、画像分類とその下流のタスクにおいて、モデルの性能を大きく向上させる。 
+具体的には、MaSAの分類精度は何もないアテンションよりも0.8%高い。
+
 **Softmax.** 
-In RetNet, Softmax is replaced with a non-linear gating function to accommodate its various computational forms [46]. 
-We replace the Softmax in MaSA with this gating function. However, the model utilizing the gating function cannot undergo stable training. 
-It is worth noting that this does not mean the gating function is inferior to Softmax. 
-The gating function may just not be compatible with our decomposed form or spatial decay.
+我々はMaSAのSoftmaxをこのゲート関数に置き換える。
+しかし、ゲーティング関数を利用したモデルは安定した学習を行うことができない。 
+これは、ゲーティング関数がSoftmaxより劣っているという意味ではないことに注意する必要がある。 
+ゲーティング関数は、我々の分解形式や空間減衰と相性が悪いだけかもしれない。
 
 **LCE.** 
-Local Context Enhancement also plays a role in the excellent performance of our model. 
-LCE improves the classification accuracy of RMT by 0.3% and enhances the model’s performance in downstream tasks.
+Local Context Enhancementもまた、我々のモデルの優れた性能に一役買っている。 
+LCEはRMTの分類精度を0.3%向上させ、下流タスクにおけるモデルの性能を高める。
+
 **CPE.** 
-Just like previous methods, CPE provides our model with flexible position encoding and more positional information, contributing to the improvement in the model’s performance in image classification and downstream tasks.
+従来の手法と同様に、CPEは我々のモデルに柔軟な位置エンコードとより多くの位置情報を提供し、画像分類や下流のタスクにおけるモデルの性能向上に寄与している。
 
 ![Table6](images/Table6.png)
-Table 6. Ablation study. We make a strict comparison among RMT, DeiT, and Swin-Transformer.  
+Table 6.アブレーション試験。RMT、DeiT、Swin-Transformerを厳密に比較している。  
 
 ![Table7](images/Table7.png)
-Table 7. Comparison between decomposed MaSA (MaSA-d) and original MaSA.
+Table 7.分解MaSA（MaSA-d）と元のMaSAの比較。
 
 ![Table8](images/Table8.png)
-Table 8. Comparison between MaSA and retention in RMT-S’s architecture.
+Table 8.RMT-SのアーキテクチャにおけるMaSAとリテンションの比較。
 
 ![Table9](images/Table9.png)
-Table 9. Comparison of inference speed among SOTA models.  
+Table 9.SOTAモデル間の推論速度の比較。  
 
 **Convolutional Stem.** 
-The initial convolutional stem of the model provides better local information, thereby further enhancing the model’s performance on various tasks.
+モデルの最初の畳み込みステムは、より優れた局所情報を提供し、それによって様々なタスクに対するモデルの性能をさらに向上させる。
+
 **Decomposed MaSA.** 
-In RMT-S, we substitute the decomposed MaSA (MaSA-d) in the third stage with the original MaSA to validate the effectiveness of our decomposition method, as illustrated in Tab. 7. 
-In terms of image classification, MaSA-d and MaSA achieve comparable accuracy.
-However, for semantic segmentation, employing MaSA-d
-significantly reduces computational burden while yielding
-similar result.
+RMT-Sでは、Table 7に示すように、分解したMaSA(MaSA-d)を第3段階で元のMaSAに置き換えて、分解手法の有効性を検証する。  
+画像分類に関しては、MaSA-dとMaSAは同程度の精度を達成しているが、セマンティックセグメンテーションに関しては、MaSA-dを採用することで、同様の結果を得ながら、計算負荷を大幅に軽減することができる。
+
 **MaSA v.s. Retention.**  
-As shown in Tab. 8, we replace MaSA with the original retention in the architecture of RMT-S. 
-We partition the tokens into chunks using the method employed in Swin-Transformer [35] for chunk-wise retention. 
-Due to the limitation of retention in modeling one-dimensional causal data, the performance of the vision backbone based on it falls behind RMT. Moreover, the chunk-wise and recurrent forms of retention disrupt the parallelism of the vision backbone, resulting in lower inference speed.
+Table. 8に示すように、RMT-Sのアーキテクチャでは、MaSAをオリジナルのretentionに置き換える。  
+Swin-Transformer[35]で採用されているチャンク単位のretentionの方法を用いて、トークンをチャンクに分割する。 
+一次元の因果データをモデル化する際のリテンションの限界により、それに基づくビジョンバックボーンの性能はRMTに劣る。 
+さらに、チャンク単位の保持とリカレント形式のretentionは、ビジョンバックボーンの並列性を乱し、推論速度を低下させる。
+
 **Inference Speed.**
- We compare the RMT’s inference speed with the recent best performing vision backbones in Tab. 9. Our RMT demonstrates the optimal trade-off be-
-tween speed and accuracy.
+Talbe. 9では、RMTの推論速度を、最近最も性能の良いビジョンバックボーンと比較している。Table 9 では我々のRMTは速度と精度の最適なトレードオフを示している。
 
 ## 5. Conclusion
 In this work, we propose RMT, a vision backbone with explicit spatial prior. 
