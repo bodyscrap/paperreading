@@ -17,118 +17,133 @@ Vision Transformer (ViT)は、近年コンピュータ・ビジョンのコミ�
 
 
 ## 1. Introduction
-Vision Transformer (ViT) [12] is an excellent visual architecture highly favored by researchers. 
-However, as the core module of ViT, Self-Attention’s inherent structure lacking explicit spatial priors. Besides, the quadratic complexity of Self-Attention leads to significant computational costs when modeling global information. 
-These issues limit the application of ViT.
-Many works have previously attempted to alleviate these issues [13, 16, 30, 35, 50, 57, 61]. For example, in Swin Transformer [35], the authors partition the tokens used for self-attention by applying windowing operations. 
-This operation not only reduces the computational cost of self-attention but also introduces spatial priors to the model through the use of windows and relative position encoding.
-In addition to it, NAT [19] changes the receptive field of Self-Attention to match the shape of convolution, reducing computational costs while also enabling the model to perceive spatial priors through the shape of its receptive field.
-Different from previous methods, we draw inspiration from the recently successful Retentive Network (Ret- Net) [46] in the field of NLP. 
-RetNet utilizes a distance-dependent temporal decay matrix to provide explicit temporal prior for one-dimensional and unidirectional text data.
-ALiBi [41], prior to RetNet, also applied a similar approach and succeeded in NLP tasks. 
-We extend this temporal decay matrix to the spatial domain, developing a two-dimensional bidirectional spatial decay matrix based on the Manhattan distance among tokens. 
-In our space decay matrix, for a target token, the farther the surrounding tokens are, the greater the degree of decay in their attention scores. 
-This property allows the target token to perceive global information while simultaneously assigning different levels of attention to tokens at varying distances. 
-We introduce explicit spatial prior to the vision backbone using this spatial decay matrix.
-We name this Self-Attention mechanism, which is inspired by RetNet and incorporates the Manhattan distance as the explicit spatial prior, as Manhattan Self-Attention (MaSA).
-Besides explicit spatial priors, another issue caused by global modeling with Self-Attention is the enormous computational burden. 
-Previous sparse attention mechanisms [11, 35, 53, 63, 75] and the way retention is decomposed in RetNet [46] mostly disrupt the spatial decay matrix, making them unsuitable for MaSA. In order to sparsely model global information without compromising the spatial decay matrix, we propose a method to decompose Self-Attention along both axes of the image. 
-This decomposition method decomposes Self-Attention and the spatial decay matrix without any loss of prior information. 
-The decomposed MaSA models global information with linear complexity and has the same receptive field shape as the original MaSA. 
-We compare MaSA with other Self-Attention mechanisms in Fig. 2. 
-It can be seen that our MaSA introduces richer spatial priors to the model than its counterparts.
-Based on MaSA, we construct a powerful vision backbone called RMT. 
-We demonstrate the effectiveness of the proposed method through extensive experiments. 
-As shown in Fig. 1, our RMT outperforms the state-of-the-art (SOTA) models on image classification tasks. 
-Additionally, our model exhibits more prominent advantages compared to other models in tasks such as object detection, instance segmentation, and semantic segmentation. 
-Our contributions can be summarized as follows:
+Vision Transformer（ViT）[12]は、研究者から非常に支持されている優れたvisionアーキテクチャである。
+しかし、ViTのコアモジュールであるSelf-Attention固有の構造には、明示的な空間的優先度が欠けている。さらに、Self-Attentionの2次関数的な複雑さは、大域的な情報をモデル化する際に大きな計算コストにつながる。
+これらの問題はViTの応用を制限する。
+このような問題を軽減するために、これまで多くの研究が試みられてきた [13, 16, 30, 35, 50, 57, 61]。 
+例えば、Swin Transformer [35]では、著者はウィンドウ演算を適用することで、self-attentionに使用するトークンを分割している。 
+この演算はself-attentionの計算コストを削減するだけでなく、窓の使用と相対位置の符号化を通じて、モデルに空間的な事前分布を導入する。
+これに加えて、NAT[19]はself-attentionの受容野を畳み込みの形状に合わせて変化させることで、計算コストを削減すると同時に、モデルが受容野の形状を通して空間敵優先度を知覚することを可能にする。 
+これまでの方法とは異なり、我々は最近NLPの分野で成功を収めたRetentive Network (Ret- Net) [46]からインスピレーションを得ている。
+RetNetは距離依存の時間的減衰行列を利用して、一次元の単方向テキストデータに対して明示的な時間的事前分布を提供する。 
+RetNetに先立つALiBi [41]も同様のアプローチを適用し、自然言語処理タスクで成功を収めている。 
+我々はこの時間減衰行列を空間領域に拡張し、トークン間のマンハッタン距離に基づく2次元双方向空間減衰行列を開発した。
+空間減衰行列では、ターゲット・トークンに対して、周囲のトークンが遠ければ遠いほど、そのattentionスコアの減衰の度合いが大きくなる。 
+この特性により、ターゲットトークンはグローバルな情報を知覚すると同時に、様々な距離にあるトークンに対して異なる注意レベルを割り当てることができる。 
+この空間減衰行列を用いて、視覚のバックボーンに明示的な空間優先度を導入する。
+RetNetにヒントを得て、マンハッタン距離を明示的な空間的事前分布として取り入れたこのSelf-Attentionメカニズムを、我々はManhattan Self-Attention (MaSA)と名付ける。
+明示的な空間優先度の他に、self-attentionを用いた大域的モデリングに起因するもう一つの問題は、膨大な計算負荷である。 
+従来のsparseなattentionメカニズム[11, 35, 53, 63, 75]や、RetNet[46]における保持の分解方法は、ほとんどが空間減衰行列を乱し、MaSAには不向きである。
+空間減衰行列を損なうことなく大域情報をスパースにモデル化するために、我々は画像の2軸に沿ってself-attentionを分解する方法を提案する。
+この分解法は、優先度情報を失うことなく、self-attentionと空間減衰行列を分解する。 
+分解されたMaSAは、グローバルな情報を線形な複雑さでモデル化し、元のMaSAと同じ受容野の形状を持つ。 
+Fig. 2において、MaSAを他のSelf-Attention機構と比較する。 
+我々のMaSAは、対応するものよりも豊富な空間的優先度をモデルに導入していることがわかる。
 
-* We propose a spatial decay matrix based on Manhattan distance to augment Self-Attention, creating the Manhattan Self-Attention (MaSA) with an explicit spatial prior.
-* We propose a decomposition form for MaSA, enabling linear complexity for global information modeling without disrupting the spatial decay matrix.
-* Leveraging MaSA, we construct RMT, a powerful vision backbone for general purposes. RMT attains high top-1 accuracy on ImageNet-1k in image classification without extra training data, and excels in tasks like object detection, instance segmentation, and semantic segmentation.
+MaSAに基づき、RMTと呼ばれる強力なビジョンバックボーンを構築する。 
+提案手法の有効性を広範な実験により実証する。 
+Fig. 1に示すように、我々のRMTは画像分類タスクにおいて、最先端の（SOTA）モデルを凌駕する。 
+さらに、我々のモデルは、物体検出、インスタンス分割、セマンティック分割などのタスクにおいて、他のモデルと比較してより顕著な優位性を示す。 
+
+我々の貢献は要約すると以下である：
+
+* マンハッタン距離に基づく空間減衰行列を提案、self-attentionを補強することで、明示的な空間優先度を持つマンハッタンself-attention(MaSA)を作成した
+* MaSAの分解形式を提案し、空間減衰行列を崩すことなく、グローバルな情報モデリングを線形の複度で可能にした。
+* MaSAを活用し、汎用的な強力なビジョンバックボーンであるRMTを構築。  
+RMTはImageNet-1kにおいて、余分な学習データなしで画像分類のトップ1の精度を達成し、物体検出、インスタンス分割、セマンティック分割などのタスクで優れている。
 
 ![Figure1](images/Figure1.png)
-Figure 1. FLOPs v.s. Top-1 accuracy on ImageNet-1K with 224 ×224 resolution. “*” indicates the model trained with token labeling [27].
+Figure1. 224×224解像度のImageNet-1KにおけるFLOPs対Top-1精度。「*」はトークン・ラベリング[27]で学習したモデル。
 
 ![Figure2](images/Figure2.png)
-Figure 2. Comparison among different Self-Attention mechanisms. 
-In MaSA, darker colors represent smaller spatial decay rates, while lighter colors represent larger ones. 
-The spatial decay rates that change with distance provide the model with rich spatial priors.
+Figure 2.異なるself-attentionメカニズムの比較。 
+MaSAでは、濃い色はより小さな空間減衰率を表し、薄い色はより大きな空間減衰率を表す。 
+距離によって変化する空間減衰率は、モデルに豊富な空間優先度情報を与える。
 
 ## 2. Related Work
 **Transformer**. 
-Transformer architecture was firstly proposed in [52] to address the training limitation of recurrent model and then achieve massive success in many NLP tasks. 
-By splitting the image into small, non-overlapped patches sequence, Vision Transformer (ViTs) [12] also have attracted great attention and become widely used on vision tasks [5, 14, 18, 39, 58, 66]. 
-Unlike in the past, where RNNs and CNNs have respectively dominated the NLP and CV fields, the transformer architecture has shined through in various modalities and fields [26, 37, 42, 60]. In the computer vision community, many studies are attempting to introduce spatial priors into ViT to reduce the data requirements for training [6, 19, 49]. 
-At the same time, various sparse attention mechanisms have been proposed to reduce the computational cost of Self-Attention [13, 53, 54, 57].
+Transformerアーキテクチャは、リカレントモデルの学習限界に対処するために、最初に[52]で提案され、その後、多くのNLPタスクで大成功を収めた。 
+画像を小さな、重複しないパッチシーケンスに分割することで、Vision Transformer(ViT)[12]も大きな注目を集め、視覚タスクで広く使用されるようになった[5, 14, 18, 39, 58, 66]。 
+RNNとCNNがそれぞれNLPとCVの分野を支配してきた過去とは異なり、トランスフォーマーアーキテクチャは様々なモダリティと分野で輝きを放っている[26, 37, 42, 60]。
+コンピュータビジョンの分野では、多くの研究がViTに空間優先度を導入し、学習に必要なデータを削減しようとしている[6, 19, 49]。 
+同時に、self-attentionの計算コストを削減するために、様々なスパースattentionメカニズムが提案されている[13, 53, 54, 57]。
 
 **Prior Knowledge in Transformer**. 
-Numerous attempts have been made to incorporate prior knowledge into the Transformer model to enhance its performance. 
-The original Transformers [12, 52] use trigonometric position en-coding to provide positional information for each token. 
-In vision tasks, [35] proposes the use of relative positional encoding as a replacement for the original absolute positional encoding. 
-[6] points out that zero padding in convolutional layers could also provide positional awareness for the ViT, and this position encoding method is highly efficient. 
-In many studies, Convolution in FFN [13, 16, 54] has been employed for vision models to further enrich the positional information in the ViT. 
-For NLP tasks, in the recent Retentive Network [46], the temporal decay matrix has been introduced to provide the model with prior knowledge based on distance changes. 
-Before RetNet, ALiBi [41] also uses a similar temporal decay matrix.
+Transformerの性能を向上させるために、事前知識をTransformerモデルに組み込む試みが数多くなされてきた。 
+オリジナルのTransformer[12, 52]は、各トークンの位置情報を提供するために三角関数によるエンコーディングを使用している。 
+視覚タスクでは、[35]が元の絶対位置エンコーディングに代わるものとして相対位置エンコーディングの使用を提案している。
+[6]は、畳み込み層におけるゼロパディングもViTに位置認識を提供することができ、この位置エンコード方法は非常に効率的であると指摘している。 
+多くの研究において、FFNの畳み込み[13, 16, 54]は、ViTの位置情報をさらに豊かにするために視覚モデルに採用されている。 
+NLPタスクのために、最近のRetentive Network [46]では、距離変化に基づく事前知識をモデルに提供するために、時間減衰行列が導入されている。 
+RetNet以前には、ALiBi [41]も同様の時間的減衰行列を使用している。
+
 
 ## 3. Methodology
 ### 3.1. Preliminary
 **Temporal decay in RetNet**. 
-Retentive Network (RetNet) is a powerful architecture for language models. 
-This work proposes the retention mechanism for sequence modeling.  
-Retention brings the temporal decay to the language model, which Transformers do not have. 
-Retention firstly considers a sequence modeling problem in a recurrent manner. 
-It can be written as Eq. 1:
+Retentive Network(RetNet)は言語モデルのための強力なアーキテクチャである。 
+本研究では、シーケンスモデリングのための保持メカニズムを提案する。  
+リテンションは、Transformerにはない時間的減衰を言語モデルにもたらす。 
+リテンションはまず、シーケンスモデリング問題を再帰的に考える。 
+これは式(1)のように書くことができる：
 
 $$
-o_n = \sum_{m=1}^n \gamma^{n-m}\left(Q_ne^{in0}\right)\left(K_me^{im0}\right)^\dagger v_m \tag{1}
+o_n = \sum_{m=1}^n \gamma^{n-m}\left(Q_ne^{in\theta}\right)\left(K_me^{im\theta}\right)^\dagger v_m \tag{1}
 $$
 
-For a parallel training process, Eq. 1 is expressed as:
+並列学習プロセスにおいて、式(1)は以下のように表される：
 
 $$
 Q=(XW_Q) \odot \Theta, K=(XW_K) \odot \bar{\Theta}, V=XW_V \\
-\Theta_n = e^{in0}, D_{nm} =\begin{cases} \gamma^{n-m} & n \geq m \\ 0 & n < m \end{cases} \\
+\Theta_n = e^{in\theta}, D_{nm} =\begin{cases} \gamma^{n-m} & n \geq m \\ 0 & n < m \end{cases} \\
 Retention(X) = (QK^T\odot D)V \tag{2}
 $$
-where $\bar{\Theta}$ is the complex conjugate of $\Theta$, and $D \in \mathbb{R}^{|x|\times|x|}$ contains both causal masking and exponential decay, which symbolizes the relative distance in one-dimensional sequence and brings the explicit temporal prior to text data.
+
+ここで、$\bar{\Theta}$ は $\Theta$ の複素共役、$D \in \mathbb{R}^{|x|\times|x|}$ は因果的マスキングと指数関数的減衰を含む。  
+これは、一次元シーケンスにおける相対距離を象徴するもので、テキストデータに明示的な時間的優先度をもたらす。
 
 ### 3.2. Manhattan Self-Attention
-Starting from the retention in RetNet, we evolve it into Manhattan Self-Attention (MaSA). 
-Within MaSA, we transform the unidirectional and one-dimensional temporal decay observed in retention into bidirectional and two-dimensional spatial decay. 
-This spatial decay introduces an explicit spatial prior linked to Manhattan distance into the vision backbone. 
-Additionally, we devise a straightforward approach to concurrently decompose the Self-Attention and spatial decay matrix along the two axes of the image.
+RetNetのretentionから出発して、我々はそれをManhattan Self-Attention (MaSA)に進化させる。 
+MaSAの中では、リテンションで観察される一方向的で一次元的な時間的減衰を、双方向的で二次元的な空間的減衰に変換する。 
+この空間的減衰は、視覚のバックボーンにマンハッタン距離にリンクした明示的な空間的優先度を導入する。 
+さらに、画像の2軸に沿ってself-attention行列と空間減衰行列を同時に分解する簡単なアプローチを考案する。
+
 
 **From Unidirectional to Bidirectional Decay:**  
-In RetNet, retention is unidirectional due to the causal nature of text data, allowing each token to attend only to preceding tokens and not those following it. 
-This characteristic is ill-suited for tasks lacking causal properties, such as image recognition. 
-Hence, we initially broaden the retention to a bidirectional form, expressed as Eq. 3:
+RetNetでは、テキストデータの因果的性質のため、保持は一方向であり、各トークンは先行するトークンのみに注目し、後続のトークンは注目しない。 
+この特性は、画像認識のような因果的特性を欠くタスクには不向きである。 
+そこで、式3で表されるように、保持を双方向に広げる：
 
 $$
 \begin{aligned}
-BiRetention(X) &= (QK^T\odot D^{Bi}) V \\
+{BiRetention}(X) &= (QK^T\odot D^{Bi}) V \\
 D_nm^{Bi} &= \gamma^{|n-m|} \tag{3}
 \end{aligned}
 $$
 
-where $BiRetention$ signifies bidirectional modeling.
+ここで ${BiRetention}$ 双方向モデリングを表す。  
 
 **From One-dimensional to Two-dimensional Decay:**  
-While retention now supports bi-directional modeling, this capability remains confined to a one-dimensional level and is inadequate for two-dimensional images. 
-To address this limitation, we extend the one-dimensional retention to encompass two dimensions.  
-In the context of images, each token is uniquely positioned with a two-dimensional coordinate within the plane, denoted as $(x_n,y_n)$ for the n-th token. 
 To adapt to this, we adjust each element in the matrix D to represent the Manhattan distance between the respective token pairs based on their 2D coordinates. 
 The matrix $D$ is redefined as follows:
+
+retentionは双方向のモデリングをサポートするようになったが、この機能は依然として一次元レベルに限定されており、二次元の画像には不十分である。 
+この制限に対処するために、我々は一次元のリテンションを二次元に拡張する。  
+画像の文脈では、各トークンは平面内の2次元座標で一意に位置決めされ、$n$番目のトークンは$(x_n,y_n)$と表記される。 
+これに適応するために、行列$D$の各要素を調整して、それぞれのトークン対の2次元座標に基づくマンハッタン距離を表現する。 
+行列$D$は以下のように再定義される：
 
 $$
 D_{nm}^{2d} = \gamma^{|x_n-x_m|+|y_n-y_m|} \tag{4}
 $$
 
-In the retention, the Softmax is abandoned and replaced with a gating function. This variation gives RetNet multiple flexible computation forms, enabling it to adapt to parallel training and recurrent inference processes. 
-Despite this flexibility, when exclusively utilizing RetNet’s parallel computation form in our experiments, the necessity of retaining the gating function becomes debatable. 
-Our findings indicate that this modification does not improve results for vision models; instead, it introduces extra parameters and computational complexity. 
-Consequently, we continue to employ Softmax to introduce nonlinearity to our model.
-Combining the aforementioned steps, our Manhattan Self-Attention is expressed as
+リテンションでは、ソフトマックスは放棄され、ゲート関数に置き換えられる。  
+この変化により、RetNetは複数の柔軟な計算形式を持つようになり、並列学習やリカレント推論処理に適応できるようになる。 
+この柔軟性にもかかわらず、我々の実験でRetNetの並列計算形式のみを利用する場合、ゲーティング関数を保持する必要性は議論の余地がある。 
+我々の知見によれば、この変更は視覚モデルの結果を改善するものではなく、むしろ余分なパラメータと計算の複雑さをもたらす。
+
+その結果、モデルに非線形性を導入するためにソフトマックスを引き続き採用する。 
+前述のステップを組み合わせると、マンハッタンself-attentionは次のように表される。
 
 $$
 \begin{aligned}
@@ -138,19 +153,20 @@ D_{nm}^{2d} &= \gamma^{|x_n-x_m|+|y_n-y_m|} \tag{5}
 $$
 
 **Decomposed Manhattan Self-Attention.** 
-In the early stages of the vision backbone, an abundance of tokens leads to high computational costs for Self-Attention when attempting to model global information. 
-Our MaSA encounters this challenge as well. 
-Utilizing existing sparse attention mechanisms [11, 19, 35, 53, 63], or the original RetNet’s recurrent/chunk-wise recurrent form directly, disrupts the spatial decay matrix based on Manhattan distance, resulting in the loss of explicit spatial prior. 
-To address this, we introduce a simple decomposition method that not only decomposes Self-Attention but also decomposes the spatial decay matrix. 
-The decomposed MaSA is represented in Eq. 6. Specifically, we calculate attention scores separately for the horizontal and vertical directions in the image. 
-Subsequently, we apply the one-dimensional bidirectional decay matrix to these attention weights. 
-The one-dimensional decay matrix signifies the horizontal and vertical distances between tokens $(D^H_{nm} = \gamma^{|y_n−y_m|}, D^W_{nm} = \gamma^{|x_n−x_m|})$:
+visonバックボーンの初期段階では、トークンが大量にあるため、グローバルな情報をモデル化しようとすると、Self-Attentionの計算コストが高くなる。 
+我々のMaSAもこの課題に遭遇する。 
+既存のsparseなattentionメカニズム[11, 19, 35, 53, 63]や、オリジナルのRetNetのリカレント／チャンク単位・リカレント形式を直接利用すると、マンハッタン距離に基づく空間減衰行列が破壊され、その結果、明示的な空間事前情報が失われる。
+この問題に対処するため、Self-Attentionを分解するだけでなく、空間減衰行列も分解する簡単な分解方法を紹介する。  
+分解されたMaSAは式6で表される。  
+具体的には、画像の水平方向と垂直方向について別々に注意スコアを計算する。 
+その後、これらの注意の重みに1次元の双方向減衰行列を適用する。 
+一次元減衰行列は、トークン間の水平方向と垂直方向の距離$(D^H_{nm} = \gamma^{|y_n-y_m|}, D^W_{nm} = ˶gamma^{|x_n-x_m|})$ を意味する：
 
 ![Figure3](images/Figure3.png)
-Figure 3. Overall architecture of RMT.
+Figure 3. RMTのアーキテクチャ全体
 
 ![Figure4](images/Figure4.png)
-Figure 4. Spacial decay matrix in the decomposed MaSA.
+Figure 4. 分解されたMaSAに置ける空間減衰行列
 
 $$
 \begin{aligned}
@@ -160,43 +176,45 @@ MaSA(X) = Attn_H (Attn_W V)\tau \tag{6}
 \end{aligned}
 $$
 
-Based on the decomposition of $MaSA$, the shape of the receptive field of each token is shown in Fig. 4, which is identical to the shape of the complete MaSA’s receptive field. 
-Fig. 4 indicates that our decomposition method fully preserves the explicit spatial prior.
-To further enhance the local expression capability of MaSA, following [75], we introduce a Local Context Enhancement module using DWConv:
+$MaSA$ の分解に基づき、各トークンの受容野の形状をFig. 4に示すが、これは完全なMaSAの受容野の形状と同一である。 
+図4は、我々の分解法が明示的な空間的事前分布を完全に保存していることを示している。
+MaSAの局所表現能力をさらに高めるために、[75]に倣って、DWConvを用いた局所文脈強調モジュールを導入する：
 
 $$
 X_{out} = MaSA(X) + LCE(V) \tag{7}
 $$
 
 ### 3.3. Overall Architecture
-We construct the RMT based on MaSA, and its architecture is illustrated in Fig. 3. 
-Similar to previous general vision backbones [35, 53, 54, 71], RMT is divided into four stages. 
-The first three stages utilize the decomposed MaSA, while the last uses the original MaSA. 
-Like many previous backbones [16, 30, 72, 75], we incorporate CPE [6] into our model.
+MaSAをベースにRMTを構築し、そのアーキテクチャをFig. 3に示す。
+最初の3つのステージは分解されたMaSAを利用し、最後のステージはオリジナルのMaSAを利用する。 
+多くの先行するバックボーン[16, 30, 72, 75]と同様に、CPE[6]を我々のモデルに組み込んでいる。
 
 ## 4. Experiments
-We conducted extensive experiments on multiple vision tasks, such as image classification on ImageNet-1K [9],
-object detection and instance segmentation on COCO 2017 [33], and semantic segmentation on ADE20K [74].
-We also make ablation studies to validate the importance of each component in RMT. More details can be found in Appendix.
+ImageNet-1K[9]での画像分類、COCO2017[33]での物体検出とインスタンス分割、ADE20K[74]での意味分割など、複数の視覚タスクに対して広範な実験を行った。
+また、RMTにおける各要素の重要性を検証するためのアブレーション研究も行っている。詳細は付録を参照されたい。
+
 ### 4.1. Image Classification
-Settings. We train our models on ImageNet-1K [9] from scratch. We follow the same training strategy in [49], with the only supervision being classification loss for a fair comparison. 
-The maximum rates of increasing stochastic depth [24] are set to 0.1/0.15/0.4/0.5 for RMT-T/S/B/L [24], respectively. 
-We use the AdamW optimizer with a cosine decay learning rate scheduler to train the models. 
-We set the initial learning rate, weight decay, and batch size to 0.001, 0.05, and 1024, respectively. 
-We adopt the strong data augmentation and regularization used in [35]. 
-Our settings are RandAugment [8] (randm9-mstd0.5-inc1), Mixup [70] (prob=0.8), CutMix [69] (prob=1.0), Random Erasing [73] (prob=0.25). 
-In addition to the conventional training meth- ods, similar to LV-ViT [27] and VOLO [68], we train a model that utilizes token labeling to provide supplementary supervision.
+**Settings.** 
+我々はImageNet-1K [9]でモデルをスクラッチで訓練する。 
+我々は[48]と同じ学習戦略に従い、公正な比較のために唯一分類損失のみを見る。 
+RMT-T/S/B/L[24]では、確率的深度[24]の最大増加率をそれぞれ0.1/0.15/0.4/0.5に設定する。
+モデルの学習には、コサイン減衰学習率スケジューラ付きの AdamW オプティマイザを使用する。 
+初期学習率、重み減衰、バッチサイズをそれぞれ0.001、0.05、1024に設定する。 
+我々は[35]で用いられた強力なデータ増強と正則化を採用する。 
+我々の設定はRandAugment [8] (randm9-mstd0.5-inc1), Mixup [70] (prob=0.8), CutMix [69] (prob=1.0), Random Erasing [73] (prob=0.25)である。 
+LV-ViT[27]やVOLO[68]と同様に、従来の学習方法に加えて、トークン・ラベリングを利用したモデルを学習し、補足的な監視を行う。
 
 ![Table1](images/Table1.png)
-Table 1. Comparison with the state-of-the-art on ImageNet-1K classification. “*” indicates the model trained with token labeling [27].
+Table. 1.ImageNet-1K分類における最新技術との比較。「*」はトークン・ラベリング[27]で学習したモデルを示す。
 
 **Results.** 
-We compare RMT against many state-of-the-art models in Tab. 1. 
-Results in the table demonstrate that RMT consistently outperforms previous models across all settings. 
-Specifically, RMT-S achieves 84.1% Top1-accuracy with only 4.5 GFLOPs. RMT-B also surpasses iFormer [45] by 0.4% with similar FLOPs. 
-Furthermore, our RMT-L model surpasses MaxViT-B [51] in top1-accuracy by 0.6% while using fewer FLOPs. 
-Our RMT-T has also outperformed many lightweight models. 
-As for the model trained using token labeling, our RMT-S outperforms the current state-of-the-art BiFormer-S by 0.5%.
+Table. 1では、RMTを多くの最先端モデルと比較している。  
+Table. 1の結果から、RMTはすべての設定において一貫して従来のモデルを上回っていることがわかる。 
+具体的には、RMT-Sはわずか4.5GFLOPで84.1%のTop1精度を達成した。  
+RMT-Bも同様のFLOPsでiFormer [45]を0.4%上回っています。 
+さらに、我々のRMT-Lモデルは、少ないFLOP数にも関わらずMaxViT-B[51]を0.6%上回るTop1精度を達成しています。 
+また、我々のRMT-Tも多くの軽量モデルを凌駕している。 
+トークン・ラベリングを用いて学習されたモデルに関しては、我々のRMT-Sは現在の最先端であるBiFormer-Sを0.5%上回っている。
 
 ### 4.2. Object Detection and Instance Segmentation
 **Settings.** 
