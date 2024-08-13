@@ -119,4 +119,41 @@ Figure  3.  センサーに平行に置かれた平面キャリブレーショ�
 130点のグリッドを持つ平面パターンの20ポーズセットのシミュレートデータの総視差 $\mathbf{D_{tot}}$ の分布(c)。  
 センサーの全領域を覆うパターンのスペックルの単一シミュレー ション画像に対する全視差 $\mathbf{D_{tot}}$ の分布(d)。  
 2つの分布 $\mathbf{D_{tot}}$ のスケールが異なることに注意。  
+この $\mathbf{p_w-p_d}$ の点のペアの定義の違いは、歪んだ画像点からのホモグラフィ計算結果に劇的な影響を与える。  
+ここで重要なことは、$\mathbf{p_p}=[x_p, y_p]^T$ として計算される再投影点 $\mathbf{p_p=Hp_w}$(式1)は、理想レンズの場合のみ $\mathbf{p}$ と一致することである。  
+ホモグラフィを実画像点 $\mathbf{p_d}$ から計算するとき、$\mathbf{p_w}$ の最尤推定値を生成する $\mathbf{p_d}$ の透視変換を記述する。  
+重要なことは、ホモグラフィ $\mathbf{H_d}$ (接尾辞 $d$ は、正解データ $\mathbf{H}$ と区別するために使用される)は、歪みの中心からの距離に関係なく、同じ重みで歪んだ点を考慮して計算されることである。
+Figure 3は、ZMに従って取得された画像(Figure 2b)と、SICで要求される画像領域全体をカバーする点グリッド(Figure 2d)に対する、 $\mathbf{H_d}$ の計算結果の違いを示している。  
+特に、Figure 3は、再投影された点グリッドに対する唯一の歪みの影響を強調するために、$\mathbf{R=I}$ （すなわち、モデル平面がセンサーに平行）で生成された合成画像を参照する。  
+説明のために、合成画像は強い樽型歪みと高度に偏芯したCODを持つ。  
+わかりやすくするため、図には矩形の点格子領域の境界のみを示している。
 
+2つのシミュレーション画像を比較すると、Figure 3aの再投影点は、3つの要因の直接的な結果として、正解値と大きく異なることがわかる：  
+(i)センサーの部分的なカバー率、(ii)歪みによってもたらされる点間隔の不均一性、(iii)CODの偏芯。  
+特に、再投影された点の領域はCODの方向にシフトしており、さらに重要なことに、理想的な再投影平面(センサーに平行)に対して傾いているように見えるため、その点に関連するホモグラフィが誤って推定されていることがわかる。  
+逆に、Figure 3bでは、再投影された点は、正解値の単なる拡大縮小コピーに見える。  
+実際、スケールファクターには異方性があり(長方形のセンサーの水平方向と垂直方向で点の数が異なるため)、CODに向かってパターンがわずかにドリフトしている。  
+ある歪みのレベルに対して、Figure 3bの再投影パターンと正解値の間の類似性は、考慮する点の数が多いほど近くなる。 
+同じ考察が $R \ne I$ の場合にも当てはまる。  
+再投影された点と正解値(Figure 3b,d) との間に (近似的な) アフィン変換が存在することが、本研究で開発されたcalibration法の基礎となっている。
+
+![Figure4](images/Figure4.png)
+Figure  4. 本研究で開発したSIC(Single Image Calibration)法のワークフロー。  
+最適なキャリブレーションパラメータは(*)で示されている。
+
+Figures  3c  and  3d  report  the  total  disparity  $D_{tot}=\parallel \mathbf{p_p-p_d}\parallel$   between  the  distorted  and  reprojected  synthetic  noise-free  data  for  a  set  of  20  poses  of  a standard  calibration  target  (see  Fig.1  in  [26])  and  for  a  single pose of a speckle target, respectively. 
+In the first case, any $n^{th}$ estimated homography $\mathbf{H_d}$ generates a set of reprojected points $\mathbf{p_p}$ that represent the best local approximation of the image grid points $\mathbf{p_d}$ in the $n^{th}$ pose (i.e. $\mathbf{p_p}\sim S_{\mathbf{p}}$, hence the low $D_{tot}$ value), but it gives an inaccurate contribution at the global level $(\mathbf{p_p \ne p})$.  
+On  the  contrary,  the  plot  in  Fig.3d  clearly  shows  that  a  first  close  (scaled)  approximation  of  the  global distortion distribution (i.e. $\mathbf{p_p}\sim S\mathbf{p}$, hence the high $D_{tot}$ value at the edges of the image) can already be obtained from the $\mathbf{H_d}$estimated from a single speckle image covering the entire sensor.  
+Figure  4  shows  the  workflow  of  the  Single  Image  Calibration  (SIC)  method.  
+The  first  two  steps  of  the  procedure are aimed at obtaining a scaled close approximation of the undistorted image points, from which a very accurate initial guess (error < 1%) of the full set of intrinsic and extrinsic parameters is computed.  
+The calibration can then be refined either by defining an analytical distortion function (Step #3A, SIC-Model-Based approach,  SIC-MB)  or,  alternatively,  by  using  the  computed  dense  and  uniform  distribution  of  the  radial  distortion data to perform a pointwise unwarping of the image (Step #3B, SIC-Model-Free approach, SIC-MF). 
+
+![Figure5](images/Figure5.png)  
+Figure 5. Synthetic data simulating the DIC point grid defined over the image of a speckle pattern covering the entire sensor area (delimited by a continuous red line in panel (c)). Calibration grid $\mathbf{p_w}$ (a), ideal image points $\mathbf{p}$ (b), distorted (detected) points $\mathbf{p_d}$ (c) and  reprojected  points  $\mathbf{p_p}$  (d).  
+The  boundaries  of  the  ideal points domain  and  the  COD  are  also  shown  in (c)  and  (d) for better  comparison. 
+For clarity, only $4755$ points of the $126505$ simulated image points are plotted. 
+
+To better describe step by step the proposed procedure, the pose #1 of the simulated data later reported in Section 3 has been considered as an illustrative example.  
+The pose is characterized by all non-null extrinsic parameters $(\mathbf{V_E} = [8^{\circ}, 16^{\circ}, -26^{\circ},5, 8, 300]^T)$ and thus it is representative of a general case (see Fig.2 in [26] and illustrative coarse grids in Figs.5a,b).  
+The intrinsic parameters and the coefficients of a barrel distortion function  were  set  as  $\mathbf{V_I} = [9285.7, 9278.6, 1609, 1353]^T$  and  $\mathbf{K}=[-1.3, 8.8, -163]^T$, respectively.  
+The  center of distortion (coinciding with the principal point 𝒆) has been deliberately set significantly away from
