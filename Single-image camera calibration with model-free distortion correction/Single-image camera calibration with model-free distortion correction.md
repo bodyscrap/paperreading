@@ -141,19 +141,66 @@ Figure 3は、ZMに従って取得された画像(Figure 2b)と、SICで要求�
 Figure  4. 本研究で開発したSIC(Single Image Calibration)法のワークフロー。  
 最適なキャリブレーションパラメータは(*)で示されている。
 
-Figures  3c  and  3d  report  the  total  disparity  $D_{tot}=\parallel \mathbf{p_p-p_d}\parallel$   between  the  distorted  and  reprojected  synthetic  noise-free  data  for  a  set  of  20  poses  of  a standard  calibration  target  (see  Fig.1  in  [26])  and  for  a  single pose of a speckle target, respectively. 
-In the first case, any $n^{th}$ estimated homography $\mathbf{H_d}$ generates a set of reprojected points $\mathbf{p_p}$ that represent the best local approximation of the image grid points $\mathbf{p_d}$ in the $n^{th}$ pose (i.e. $\mathbf{p_p}\sim S_{\mathbf{p}}$, hence the low $D_{tot}$ value), but it gives an inaccurate contribution at the global level $(\mathbf{p_p \ne p})$.  
-On  the  contrary,  the  plot  in  Fig.3d  clearly  shows  that  a  first  close  (scaled)  approximation  of  the  global distortion distribution (i.e. $\mathbf{p_p}\sim S\mathbf{p}$, hence the high $D_{tot}$ value at the edges of the image) can already be obtained from the $\mathbf{H_d}$estimated from a single speckle image covering the entire sensor.  
-Figure  4  shows  the  workflow  of  the  Single  Image  Calibration  (SIC)  method.  
-The  first  two  steps  of  the  procedure are aimed at obtaining a scaled close approximation of the undistorted image points, from which a very accurate initial guess (error < 1%) of the full set of intrinsic and extrinsic parameters is computed.  
-The calibration can then be refined either by defining an analytical distortion function (Step #3A, SIC-Model-Based approach,  SIC-MB)  or,  alternatively,  by  using  the  computed  dense  and  uniform  distribution  of  the  radial  distortion data to perform a pointwise unwarping of the image (Step #3B, SIC-Model-Free approach, SIC-MF). 
+Figure 3cとFigure 3dは、標準校正ターゲット([26]のFig.1参照)の20ポーズセットとスペックルターゲットの単一ポーズについて、それぞれ歪んだデータと再投影された合成ノイズフリーデータの合計視差 $D_{tot}=\parallel \mathbf{p_p - p_d}$ を報告している。
+最初のケース(Figure 3c)では、任意の $n^{th}$ 推定ホモグラフィ $\mathbf{H_d}$ は、$n^{th}$ ポーズにおける画像格子点 $\mathbf{p_d}$ の最良の局所近似を表す再投影点の集合 $\mathbf{p_p}$ を生成する。  
+これは $n^{th}$ ポーズにおける画像格子点 $\mathbf{p_d}$ の最良の局所近似を表す(すなわち、$\mathbf{p_p  \sim p_d}$ であり、$D_{tot}$ 値が低い)。  
+しかし、大域レベル($\mathbf{p_p  \ne p}$)では不正確な寄与を与える。  
+一方、Figure 3dのプロットは、センサ全体をカバーする単一のスペックル画像から推定された $\mathbf{H_d}$ から、大域的な歪み分布(すなわち、$\mathbf{p_p} \sim S\mathbf{p}$、したがって画像のエッジで高い$D_{tot}$値)の初期段階で近い(スケーリングされた)近似がすでに得られることを明確に示している。  
+Figure 4はシングルイメージキャリブレーション(SIC)法のワークフローを示す。  
+手順の最初の2つのステップは、歪みのない画像点のスケーリングされた近似を得ることを目的とし、そこから内部および外部パラメータのフルセットの非常に正確な初期推測（誤差<1%）を計算する。  
+キャリブレーションは、解析的な歪み関数を定義することにより(ステップ#3A、SIC-モデルベースアプローチ、SIC-MB)、あるいは代わりに、計算されたラジアル歪みデータの密で均一な分布を使用して、画像のポイントワイズ・アンワーピングを実行することによって(ステップ#3B、SIC-モデルフリーアプローチ、SIC-MF)、改良することができる。  
 
 ![Figure5](images/Figure5.png)  
-Figure 5. Synthetic data simulating the DIC point grid defined over the image of a speckle pattern covering the entire sensor area (delimited by a continuous red line in panel (c)). Calibration grid $\mathbf{p_w}$ (a), ideal image points $\mathbf{p}$ (b), distorted (detected) points $\mathbf{p_d}$ (c) and  reprojected  points  $\mathbf{p_p}$  (d).  
-The  boundaries  of  the  ideal points domain  and  the  COD  are  also  shown  in (c)  and  (d) for better  comparison. 
-For clarity, only $4755$ points of the $126505$ simulated image points are plotted. 
+Figure 5. センサーの全領域を覆うスペックルパターンの画像上に定義されたDIC点グリッドをシミュレートした合成データ(パネル(c)では連続した赤線で区切られている)。
+キャリブレーショングリッド $\mathbf{p_w}$ (a)、理想画像点 $\mathbf{p}$ (b)、歪んだ(検出された)点 $\mathbf{p_d}$ (c)、再投影点 $\mathbf{p_p}$ (d)。  
+(c)と(d)には比較のために理想点領域とCODの境界も示してある。 
+わかりやすくするために、$126505$ 点のシミュレーション画像のうち、$4755$ 点のみをプロットしている。
 
-To better describe step by step the proposed procedure, the pose #1 of the simulated data later reported in Section 3 has been considered as an illustrative example.  
-The pose is characterized by all non-null extrinsic parameters $(\mathbf{V_E} = [8^{\circ}, 16^{\circ}, -26^{\circ},5, 8, 300]^T)$ and thus it is representative of a general case (see Fig.2 in [26] and illustrative coarse grids in Figs.5a,b).  
-The intrinsic parameters and the coefficients of a barrel distortion function  were  set  as  $\mathbf{V_I} = [9285.7, 9278.6, 1609, 1353]^T$  and  $\mathbf{K}=[-1.3, 8.8, -163]^T$, respectively.  
-The  center of distortion (coinciding with the principal point 𝒆) has been deliberately set significantly away from
+提案された手順を段階的に説明するために、Section 3で報告されるシミュレーションデータのポーズ#1が例として考慮されている。  
+このポーズは、すべての非ヌル外部パラメータ $(\mathbf{V_E} = [8^{\circ}, 16^{\circ}, -26^{\circ},5, 8, 300]^T)$ によって特徴付けられ、したがって一般的なケースを代表する([26]のFig.2およびFig.5a,bの 粗いグリッドを参照)。  
+内部パラメータとバレル歪み関数の係数はそれぞれ $\mathbf{V_I} = [9285.7, 9278.6, 1609, 1353]^T$ と $\mathbf{K}=[-1.3, 8.8, -163]^T$ とした。  
+歪みの中心(主点 $\mathbf{e}$ と一致)は、センサーの中心 $\mathbf{e_s} = [u_s, v_s]^T = [1632, 1224]^T$ からかなり離れたところに意図的に設定されている。
+$n_p=126505$ 点のターゲット点 $\mathbf{p_w}$ を画像全体に投影し、SIC法に必要なスペックル画像の点データ $\mathbf{p_d}$ をシミュレートして画像データを生成した(Figure 2d)。  
+Figure 5dは、理想点領域の境界(連続した黒線)と、歪んだ点 $\mathbf{p_d}$(Figure 5cに示す)から計算されたホモグラフィ $\mathbf{H_d}$ から得られた再投影点 $\mathbf{p_p}$ を示す。  
+1枚の画像(Figure 5c)からカメラを較正するために必要な手順を以下に詳述する。
+
+*Step #1: 歪みの中心の評価*  
+Figure 5dは、画像全体を覆う非常に密な格子点 $\mathbf{p_d}$ を用いてホモグラフィ $\mathbf{H_d}$ を求めると、再投影された点 $\mathbf{p_p}$ は、スケールファクター $S$ だけ基底真理 $\mathbf{p}$ と異なるように見えることを示している。  
+実際、再投影された点 $\mathbf{p_p}$ は、歪んでいない点の集合 $\mathbf{p_u} =[x_u, y_u]^T = S\mathbf{p}$ とは一致しない。  
+なぜなら、ホモグラフィ $\mathbf{H_d}$ の計算は、水平方向と垂直方向(矩形センサーの最も一般的な場合)の異なる点の数 $\mathbf{p_d}$ の影響を受け、それらの方向に沿って、*COD*偏心によるパターンの異なる歪みの度合いの影響を受けるからである。  
+従って、歪みのない点 $\mathbf{p_u}$ に対して、$\mathbf{p_p}$ の分布はアスペクト比 $AR = S_y / S_x \ne 1$(ここで、 $S_x$ と $S_y$ は水平方向と垂直方向のスケールファクターである)となり、樽(ピンクッション)歪みのために*COD*の方へ(遠ざかる方へ)シフトする。  
+十分近似されていれば、再投影された点 $\mathbf{p_p}$ と歪んでいない点 $\mathbf{p_u}$ の間にはアフィン変換が存在すると仮定できる。  
+この変換を評価するために、まず、2組の点 $\mathbf{p_d}$ と $\mathbf{p_p}$ を、それぞれ $(u_0, v_0)$ (*COD*座標) と $(u_c, v_c)$ (再投影された点パターンの中心の座標)でシフトして、センサフレームの原点にセンタリングする：
+
+$$
+\begin{aligned}
+\mathbf{p_{d0}} = 
+\begin{bmatrix} x_{d0} \\ y_{d0}\end{bmatrix} =
+\begin{bmatrix} x_{d} - u_0 \\ y_{d} - v_0\end{bmatrix} \\
+\mathbf{p_{p0}} = 
+\begin{bmatrix} x_{p0} \\ y_{p0}\end{bmatrix} =
+\begin{bmatrix} x_{p} - u_0 \\ y_{p} - v_0\end{bmatrix}
+\end{aligned}
+\tag{5}
+$$  
+
+次に、中心射影点 $\mathbf{p_{p0}}$ に異方性スケーリングを適用し、次のように中心歪みなし点 $\mathbf{p_{u0}}$ を得る：
+
+$$
+\begin{aligned}
+\mathbf{p_{u0}} = 
+\begin{bmatrix} x_{u0} \\ y_{u0}\end{bmatrix} =
+\begin{bmatrix} S_x & 0 \\ 0 & S_y \end{bmatrix}
+\begin{bmatrix} x_p -u_c \\ y_p - v_c \end{bmatrix} =
+\begin{bmatrix} x_u -u_0 \\ y_u - v_0 \end{bmatrix}.
+\end{aligned}
+\tag{6}
+$$  
+
+Since only radial distortion is considered, each pair of points $\mathbf{p_{d0}} - \mathbf{p_{u0}}$ must lie on a line $l$ passing through the origin of the sensor frame.  
+The set of the unknown parameters in Eq.(6) can therefore be estimated by imposing the collinearity  constraint, i.e. by  minimizing  the sum $CC$ of the distances of  the $n_p$ lines $l$ from $[0,0]$ , defined as follows: 
+
+$$
+CC(S_x, S_y, u_0, v_0, u_c, v_c) = \frac{1}{n_p}\sum_{i=1}^{n_p} 
+\frac{\parallel x_{u0}(i) y_{d0}(i) - y_{u0}(i) x_{d0}(i) \parallel}{\sqrt{(y_{d0}(i) - y_{u0}(i))^2 + (x_{d0}(i) - x_{u0}(i))^2}}. \tag{7}
+$$
