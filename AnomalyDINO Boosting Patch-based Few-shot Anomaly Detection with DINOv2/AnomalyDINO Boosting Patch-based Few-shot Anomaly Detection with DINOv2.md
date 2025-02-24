@@ -25,9 +25,9 @@ AnomalyDINOは、オーバーヘッドの削減と、その卓越した数ショ
 
 ![Figure1](images/Figure1.png)
 Figure 1: 単一の名目上の参照サンプルに基づくAnomalyDINOによる異常検出（ここではMVTec-ADのカテゴリ「Screw」）。
-数少ないパッチ表現を(潜在的に拡張された)参照サンプルから、メモリバンク $\Mu$ に集める。
+数少ないパッチ表現を(潜在的に拡張された)参照サンプルから、メモリバンク $\mathcal{M}$ に集める。
 テスト時には、(該当する場合は)マスキングによって関連するパッチ表現を選択する。  
-$\Mu$ 中の名目上の表現との距離から、アノマリーマップと、集約統計量 $q$(←アノマリーマップの値の合計とかだと思われる) を用いた対応するアノマリースコア $s(x_{test})$ が得られる。  
+$\mathcal{M}$ 中の名目上の表現との距離から、アノマリーマップと、集約統計量 $q$(←アノマリーマップの値の合計とかだと思われる) を用いた対応するアノマリースコア $s(x_{test})$ が得られる。  
 マスキングと特徴抽出の両方にDINOv2を利用した。他のカテゴリの例は右図(およびAppendix. AのFigure.4とFigure.5)に示す。
 
 産業用画像のADは、ここ2、3年で大きな関心を集めている。  
@@ -83,41 +83,102 @@ DINOによって抽出された特徴量は、ローカル情報とグローバ�
 GroundingDINO [24]は、DINOフレームワークを基礎とし、テキスト情報と視覚情報の整合を改善することに重点を置き、詳細なオブジェクトの位置特定とマルチモーダル理解を必要とするタスクにおけるモデルのパフォーマンスを向上させる。  
 
 **Anomaly Detection**  
-Given a predefined notion of normality, the anomaly detection task is to detect test samples that deviate from this concept [43, 35].  
-In this work, we focus on low-level sensory anomalies of industrial image data, i.e., we do not target the detection of semantic anomalies but of low-level features such as scratches of images of industrial products (see e.g., Figure 1).  
-Several works tackled this task by either training an anomaly classifier [36] or a generative model, which allows for reconstruction-based or likelihood-based AD [40, 25, 45, 9, 27].
-However, this work focuses on few-shot AD, which tackles anomaly detection under strong restrictions on the number of available training samples. Various recent methods recognized the effectiveness of pre-trained vision models for few-shot AD.  
-The underlying idea in these approaches is to leverage the feature representations originating from pre-trained ResNets [17], Wide ResNets [44], and Vision Transformers (ViT) [11].  
-These models can extract representations on a patch and pixel level, which can be compared against a memory bank, which aggregates patch and pixel features provided by the training set.  
-The comparison with the memory bank is typically conducted using a nearest neighbor approach [1, 8, 10, 33, 41, 23]. Loosely speaking, patches and pixels corresponding to anomalies are expected to have a high distance to their nearest neighbor in the memory bank.  
-Another line of work builds upon the success of pre-trained language-vision models in zero-shot classification.  
-The underlying idea consists of two steps.  
-First, these approaches define sets of prompts describing nominal samples and anomalies.  
-Second, the corresponding textual embeddings are compared against the image embeddings [18, 7, 20, 47].  
-Images whose visual embedding is close to the textual embedding of a prompt associated with an anomaly are classified as anomalous.  
-However, these methods either require significant prompt engineering (e.g., [7] use a total of 35×7 different prompts for describing normal samples) or fine-tuning of the prompt(-embeddings).  
-Lastly, another type of few-shot anomaly detection builds upon the success of multimodal chatbots.  
-These methods require more elaborate prompting and techniques for interpreting textual outputs [42].  
-Since these methods do not require a memory bank, they are capable of performing zero-shot anomaly detection.  
+事前に定義された正規性の概念が与えられた場合、異常検出タスクはこの概念から逸脱したテストサンプルを検出することである [43, 35]。  
+つまり、意味的な異常ではなく、工業製品の画像の傷のような低レベルの特徴の検出をターゲットとしている(例えば、Figure. 1参照)。  
+いくつかの研究は、異常分類器[36]、あるいは再構成ベースまたは尤度ベースのADを可能にする生成モデル[40, 25, 45, 9, 27]を訓練することによって、このタスクに取り組んでいる。  
+一方、本研究はfew-shot ADに商店を当てて居る。これは利用可能な学習サンプル数に強い制約がある中での異常検知に取り組んでいる。
+最近の様々な手法では、事前に訓練済みビジョンモデルがfew-shot ADに有効であることが認識されている。  
+これらのアプローチの基本的な考え方は、事前に訓練されたResNets [17]、Wide ResNets [44]、Vision Transformers (ViT)[11]に由来する特徴表現を活用することである。  
+これらのモデルは、パッチやピクセルレベルでの表現を抽出することができ、トレーニングセットから提供されたパッチやピクセルの特徴を集約したメモリバンクと比較することができる。  
+メモリーバンクとの比較は、一般的に最近傍アプローチを用いて行われる[1, 8, 10, 33, 41, 23]。  
+大雑把に言えば、アノマリーに対応するパッチやピクセルは、メモリバンク内の最近傍との距離が高いと予想される。  
+もう一つの研究は、zero-shot分類における、事前に訓練された言語ビジョンモデルの成果に基づいている。  
+基本的な考え方は2つのステップからなる。  
+第一に、これらのアプローチは、名目的なサンプルと異常を記述するプロンプトのセットを定義する。  
+次に、対応するテキスト埋め込みを画像埋め込み [18, 7, 20, 47] と比較する。  
+視覚的埋め込み特徴量が、異常に関連するプロンプトのテキスト埋め込み特徴量に近い画像は、異常として分類される。  
+しかし、これらの手法では、プロンプトのエンジニアリング(例えば、[7]では、通常のサンプルを記述するために合計35×7種類のプロンプトを使用している)、またはプロンプト(や、プロンプトの埋め込み)の微調整が必要である。  
+最後に、マルチモーダル・チャットボットの成功の上に、もう一つのタイプのfew-shot異常検知を構築する。  
+これらの方法は、より精巧なプロンプトと、テキスト出力を解釈するテクニックを必要とする [42]。  
+これらの方法はメモリバンクを必要としないため、zero-shot異常検出が可能である。  
 
 **Categorization of Few-/Zero-Shot Anomaly Detectors**  
-Previous works consider different AD setups, which complicates their evaluation and comparison.  
-To remedy this, we provide a taxonomy of recent few- and zero-shot AD based on the particular ‘shot’-setting, the training requirements, and the modes covered by the underlying models.
-We categorize three ‘shot’-settings: zero-shot, few-shot, and batched zero-shot.  
-Zero- and few-shot settings are characterized by the number of nominal training samples a method can process, before making predictions on the test samples.  
-In batched zero-shot, inference is not performed sample-wise but based on a whole batch of test sam-ples, usually the full test set.  
-For instance, the method proposed in [23] benefits from the fact that a significant majority of pixels correspond to normal pixels, which motivates the strategy of matching patches across a batch of images.  
-Another work that considers this setting [21], deploys a parameter-free anomaly detector based on the effect of batch normalization. We split the training requirements into the categories ‘Training-Free’, ‘Fine-Tuning’, and ‘Meta- Training’.  
-‘Training-Free’ approaches do not require any training, while ‘Fine-Tuning’ methods use the few accessible samples to modify the underlying model.  
-In contrast, ‘Meta-Training’ is associated with training the model on a dataset related to the test data.  
-For example, [21] train their model on MVTec-AD containing all classes except the class they test against. [47] and [7] train their model on VisA when evaluating the test performance on MVTec-AD and vice versa.  
-Finally, we differentiate the leveraged models, which are either vision models (such as pre-trained ViT) or language-vision models (such as CLIP).  
-We provide a detailed summary in Table 1.
+これまでの研究は、異なるADの設定をを考慮しているため、評価や比較が複雑になっている。  
+これを改善するために、特定の「shot」設定、トレーニング要件、および基礎となるモデルがカバーするモードに基づく、最近のfew-shotおよびzero-shot ADの分類法を提供する。  
+「shot」の設定を次の3つにカテゴライズする : zero-shot, few-shot, バッチ化zero-shot。
+zero-shotとfew-shotの設定は、テストサンプルの予測を行う前に、その手法が処理できる公称学習サンプルの数によって特徴付けられる。  
+バッチ化zero-shotでは、推論はサンプル単位ではなく、テストサンプルのバッチ全体(通常はテストセット全体)に基づいて行われる。  
+例えば、[23]で提案された方法は、ピクセルの大部分が正常なピクセルに対応するという事実から利益を得ており、これが画像のバッチ全体でパッチをマッチングさせる戦略の動機となっている。  
+この設定を考慮した別の研究[21]では、バッチ正規化の効果に基づくパラメータフリーの異常検出器を導入している。  
+トレーニングの必要性についえ「トレーニング不要」、「Fine-Tuning」、「メタトレーニング」のカテゴリーに分けた。  
 
-Table 1: Taxonomy of recent few- and zero-shot anomaly
-detection methods. The † indicates approaches that were
-introduced as full-shot detectors but then considered as few-
-shot detectors in later works, see e.g., [33].  
+トレーニング不要」アプローチはトレーニングを必要としないが、「Fine-Tuning」手法は、基本モデルを修正するためにアクセス可能な少数のサンプルを使用する。  
+それとは対照的に、「メタトレーニング」は、テストデータに関連するデータセットでモデルをトレーニングすることに関連する。  
+例えば、[21]は、テストするクラス以外のすべてのクラスを含むMVTec-ADでモデルを訓練する。  
+[47]と[7]は、MVTec-ADでテスト性能を評価する際にVisAでモデルを訓練しており、その逆も同様である。  
+
+最後に、視覚モデル(学習済みViTなど)または言語視覚モデル(CLIPなど)である活用モデルを区別する。  
+Table 1に詳細をまとめた。  
+
+Table 1: 最近のfew-shotとzero-shotの異常検知手法の分類法。  
+$\dagger$ は、フルショット検出器として導入されたが、その後の研究で少数ショット検出器として考慮されたアプローチを示す。(例えば [33] )  
 
 ![Table1](images/Table1.png)  
 
+## 3 Matching Patch Representations for Visual Anomaly Detection
+
+このセクションでは、DINOv2を活用して意味のあるパッチレベルの特徴を抽出するAnomalyDINOを紹介する。  
+利用したバックボーンの強力な特徴抽出能力により、画像データに対して数ショットでトレーニング不要のADを実行するシンプルなパッチベースのマッチング戦略に戻ることができる。  
+私たちはまず、名目的なサンプルの関連するパッチ表現をメモリバンク $\mathcal{M}$ に集めます。  
+次に、各テストパッチについて、$\mathcal{M}$ の中で最も近い公称パッチまでの距離を計算する。  
+パッチベースの距離を適切に集約することで、画像レベルでの異常スコアが得られる。  
+PatchCore[33]に触発された我々の手法は、DINOv2をバックボーンとして選択することでメモリバンクフレームワークを簡素化し、これにより、どの表現またはレイヤーを使用し、それらをどのように集約するかを決定することで、特徴量エンジニアリング段系の複雑さを軽減することができる。  
+また、改良された集約統計量と、zero-shot masking とオーグメンテーションを組み込んだ新しい前処理パイプラインを導入することで、メモリーバンクの概念を few-shot 学習体制に合わせた。  
+提案された方法は、以下のサブセクションで詳しく説明する。  
+
+### 3.1 Anomaly Detection via Patch (Dis-) Similarities
+
+メモリーバンク・アプローチの考え方を簡単におさらいしておこう。  
+適切な特徴抽出器 $f: \mathcal{X} \rightarrow \mathcal{F^n}$ を仮定する。  
+この $f$ は画像　$x \in \mathcal{X}$ をパッチ特徴量のタプル $f(x) = (p_1, ..., p_n)$ にマッピングする。  
+ここで、$\mathcal{X}$ は画像空間を表し、$\mathcal{F}$ は特徴空間を表す。  
+$n$ は画像解像度とパッチサイズに依存する。  
+$ k \geq 1 $ の名目的な参照サンプル $X_{ref} := \{x^{(i)} | i \in [k]\}$ が与えられた場合、名目的なパッチ特徴を収集し、メモリバンクに格納する( $[k] := {1, \dots , k}$ の省略形 )  
+
+$$
+M := \bigcup_{x^{(i)} \in X_{ref}} \{p^{(i)}_j | f(x^{(i)}) = (p^{(i)}_1, ..., p^{(i)}_n), j \in [n]\} . \tag{1}
+$$
+
+テストサンプル $x_{test}$ をスコアリングするために、抽出されたパッチ表現 $f(x_{test}) = (p_1,...,p_n)$ を集め、それらがどの程度 $\mathcal{M}$ に適合しているかをチェックする。  
+そのために、与えられたテストパッチ $p \in \mathcal{F}$ に対して最も近い参照パッチまでの距離を求める最近傍アプローチを利用する。
+
+$$
+d_{NN}(p; \mathcal{M}) := \min_{p_{ref} \in \mathcal{M}} d(p, p_{ref}) \tag{2}
+$$
+
+$d$ は何らかの距離の指標である。我々の実験では、$d$ はコサイン距離として設定した。すなわち、
+
+$$
+d(x, y) := 1 - \frac{\langle x, y \rangle}{\|x\| \|y\|} . \tag{3}
+$$
+
+画像レベルのスコア $s(x_{test})$ は、適切な統計量 $q$ を用いてパッチ距離を集約することで与えられる。
+
+$$
+s(x_{test}) := q(\{d_{NN}(p_1; \mathcal{M}), ..., d_{NN}(p_n; \mathcal{M})\}) . \tag{4}
+$$
+
+本論文を通して、$q$ は最も異常なパッチの1%の平均距離として定義する。すなわち、$q(D) := mean(H_{0.01}(\mathcal{D}))$ であり、$H_{0.01}(\mathcal{D})$ は $\mathcal{D}$ の中で最も高い1%の値を含む。
+
+この統計量 $q$ は、$99%$ 分位数のリスクの尾部の経験的推定値として理解することができ、広範な設定に適していることがわかる。なぜなら、2つの望ましい特性をバランスよく保つからである:  
+
+まず、$s(x_{test})$ が最も高いパッチ距離に依存するようにしたい。なぜなら、それが最も強い異常信号を提供する可能性があるからである。  
+同様に、 (特に $\mathcal{M}$ が疎に配置されているfew-shotシナリオで) 特定の高いパッチ距離に対する一定の程度のロバスト性を望む。  
+しかし、特殊なケースに対応するために、$q$ を別の統計量に置き換えることもできる。  
+例えば、異常が画像の大部分をカバーすると予想される場合、パッチ距離の高いパーセンタイルが適切な選択となるかもしれない。  
+反対に、異常がローカルにのみ発生し、ごくわずかなパッチ/または単一のパッチのみが影響を受ける可能性がある場合、スコア $q$ は最も大きいパッチ距離に対して感度が高くなければならない。
+しばしば、最大のピクセル単位の異常スコアが考慮される。このようなピクセルレベルの異常スコアは、通常、完全な画像解像度にアップサンプリングして、いくつかのスムージング操作を適用することで得られる。
+[33] にしたがって、パッチ距離をピクセルレベルの異常スコアに変換し、潜在的な欠陥のローカライズを行うために、バイリニアアップサンプリングとガウス平滑化 $(\sigma = 4.0)$ を利用する。
+
+得られた異常マップの例は、Figure 1とAppendix A(Figure 4と5)で視覚化されている。  
+我々は、AnomalyDINOをバッチ化zero-shotシナリオにも拡張している。Appendix D (Figure 15)を参照。
