@@ -182,3 +182,26 @@ $$
 
 得られた異常マップの例は、Figure 1とAppendix A(Figure 4と5)で視覚化されている。  
 我々は、AnomalyDINOをバッチ化zero-shotシナリオにも拡張している。Appendix D (Figure 15)を参照。
+
+### 3.2 Enriching the Memory Bank & Filtering Relevant Patches
+
+few-shot異常検出の設定では、限られた名目サンプルから正規性の概念を効果的に捉えることが主な課題である。  
+有効な戦略は、回転などのシンプルなオーグメンテーションを適用することで、名目パッチ特徴の変動性を高めることである。  
+テスト時の変動性が、参照データ $X_{ref}$ よりもかなり大きいと予想されるため、これは重要である。  
+テスト画像の無関係な領域が誤って高い異常スコアにつながることを避けるために、我々は関心のあるオブジェクトをマスクすることを提案する。  
+このアプローチは、Figure 8、Appendix Cに例示されているように、特に限られた参照試料ではバックグラウンドの自然変動を十分に捕捉できない可能性のあるfew-shotの体制において、偽陽性のリスクを軽減する。
+適切な前処理技術 - masking や augmentation(場合によっては両方の)適用 - は、関心のあるオブジェクトの特定の特性に依存するべきであることに注意することが重要である。
+効果的な前処理パイプラインを設計する際の課題と考慮点についてのより詳細な議論については、Appendix C.1 を参照のこと。
+
+**Masking**  
+Masking, i.e., delineating the primary object(s) in an image from its background, can help to reduce false-positive predictions.  
+To minimize the overhead of the proposed pipeline, we utilize DINOv2 also for masking.  
+This is achieved by thresholding the first PCA component of the patch features [29].  
+We observe empirically that this sometimes produces erroneous masks.  
+Frequently, such failure cases occur for close-up shots, where the objects of interest account for ≳50% of patches.  
+To address this issue, we check if the PCA-based mask accurately captures the object in the first reference sample and apply the mask accordingly, which gives rise to the ‘masking test’ in Figure 2.  
+This test is performed only once per object as the procedure yields very consistent outputs.  
+In addition, we utilize dilation and morphological closing to eliminate small holes and gaps within the predicted masks.  
+See Figures 12 and 13 for examples of this masking procedure, Table 8 for the outcomes of the masking test per object, and Figure 8 for a visualization of the benefits of masking in the presence of background noise (all in Appendix C).  
+In general, we do not mask textures (e.g., ‘Wood’ or ‘Tile’ in MVTec-AD).  
+
