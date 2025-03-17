@@ -194,14 +194,33 @@ few-shot異常検出の設定では、限られた名目サンプルから正規
 効果的な前処理パイプラインを設計する際の課題と考慮点についてのより詳細な議論については、Appendix C.1 を参照のこと。
 
 **Masking**  
-Masking, i.e., delineating the primary object(s) in an image from its background, can help to reduce false-positive predictions.  
-To minimize the overhead of the proposed pipeline, we utilize DINOv2 also for masking.  
-This is achieved by thresholding the first PCA component of the patch features [29].  
-We observe empirically that this sometimes produces erroneous masks.  
-Frequently, such failure cases occur for close-up shots, where the objects of interest account for ≳50% of patches.  
-To address this issue, we check if the PCA-based mask accurately captures the object in the first reference sample and apply the mask accordingly, which gives rise to the ‘masking test’ in Figure 2.  
-This test is performed only once per object as the procedure yields very consistent outputs.  
-In addition, we utilize dilation and morphological closing to eliminate small holes and gaps within the predicted masks.  
-See Figures 12 and 13 for examples of this masking procedure, Table 8 for the outcomes of the masking test per object, and Figure 8 for a visualization of the benefits of masking in the presence of background noise (all in Appendix C).  
-In general, we do not mask textures (e.g., ‘Wood’ or ‘Tile’ in MVTec-AD).  
+Masking、つまり画像内の主要な物体をその背景から区別することは、偽陽性予測を減らすのに役立つ。  
+提案パイプラインのオーバーヘッドを最小限に抑えるために、マスキングにもDINOv2を利用している。  
+これは、PCAの第1主成分を用いてパッチ特徴のマスクを作成することで達成される[29]。  
+経験的に、これは時々誤ったマスクを生成することがわかっている。  
+近影に対するこのような失敗事例は、興味のあるオブジェクトがパッチの50%以上を占める場合に発生することがよくある。  
+この問題に対処するために、PCAベースのマスクが最初の参照サンプルのオブジェクトを正確に捉えているかどうかを確認し、それに応じてマスクを適用する。  
+これにより、Figure 2の「masking test」が生まれる。  
+このテストは、各オブジェクトに対して1回だけ実行され、非常に一貫した出力を生成するための手順である。
 
+![Figure2](images/Figure2.png)  
+Figure 2: **MVTec-AD での masking test**  
+'Capsule'と'Hazelnut'(上段)ではマスキングは成功しているが、'Cable'と'Transistor'(下段)では、いくつかの領域で、本来は対象物に属するべきところを、背景として誤って予測された(赤でハイライト)。  
+物体毎の結果は、Appendix C.1を参照。  
+
+それに加えて、予測されたマスク内の小さな穴や隙間をなくすために、膨張(dilation)とモルフォロジのクロージング処理(膨張&収縮)を利用する。
+Figure 12 と 13 は、このマスキング手順の例を示しており、Table 8 はオブジェクトごとのマスキングテストの結果を示している。  
+Figure 8 は、背景ノイズの存在下でのマスキングの利点を視覚化している(全体は Appendix C)。  
+一般に、テクスチャ(例えば、MVTec-ADの「Wood」や「Tile」)をマスクしない。  
+
+**Rotation**  
+
+参照サンプルを回転させることで、$\mathcal{M}$ で捉えられた正規性の概念内の変動をよりよく模倣することができ、検出性能が向上する可能性がある。
+例えば、Figure 1に描かれているようなようなMVTec-ADの「スクリュー」のような回転不変特徴量が望ましいケースを考えてみる。  
+一方で、回転は、興味のあるオブジェクト(またはその一部)の回転が異常と見なされる場合には、有害である可能性がある(例えば、Figure 11を参照)。
+
+2つの異なる設定を考慮する。  
+'agnostic'(不可知論的) なケース(認識における回転の影響については認知できないという考え)では、これは本論文の主焦点であるが、常に参照サンプルを回転させる。  
+また、サンプルの潜在的な回転について知っている場合('informed')も考える。  
+'informed'なケースは、産業／医療環境においてデータ収集プロセスが通常制御可能であり(あるいはテスト画像の位置合わせが可能であり)、推論時間の短縮につながる可能性があるため、賢明である。  
+maskingとrotationの効果、および'informed'と'agnostic'の比較については、Appendix C.1を参照。  
