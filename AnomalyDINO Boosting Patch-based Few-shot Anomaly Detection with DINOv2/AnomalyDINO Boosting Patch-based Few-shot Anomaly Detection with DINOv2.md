@@ -224,3 +224,80 @@ Figure 8 は、背景ノイズの存在下でのマスキングの利点を視�
 また、サンプルの潜在的な回転について知っている場合('informed')も考える。  
 'informed'なケースは、産業／医療環境においてデータ収集プロセスが通常制御可能であり(あるいはテスト画像の位置合わせが可能であり)、推論時間の短縮につながる可能性があるため、賢明である。  
 maskingとrotationの効果、および'informed'と'agnostic'の比較については、Appendix C.1を参照。  
+
+## 4 Experiments
+
+**AnomalyDINO – Defaults**  
+Using DINOv21 as backbone allows us to choose from different distillation sizes, which range from small (ViT-S, 21×106 parameters) to giant (ViT-G, 1×109 parameters).  
+To prioritize low latency, we take the smallest model as our default (and denote our default pipeline AnomalyDINO-S, accordingly) and evaluate two input resolutions, 448 and 672 pixels (smaller edge).  
+As discussed above, we utilize the ‘agnostic’ preprocessing by default (see Appendix C).  
+
+**Datasets**  
+For the experiments, we consider MVTec-AD2 and VisA,3 two datasets with high-resolution images for industrial anomaly detection.  
+MVTec-AD consists of fifteen categories, depicting single objects or textures, and up to eight anomaly types per category.  
+VisA has twelve categories and comes with diverse types of anomalies condensed into one anomaly class ‘bad’.  
+Some categories in VisA can be considered more challenging as multiple objects and complex structures are present.  
+
+**Evaluation Metrics**  
+We assess the image-level detection and the pixel-level segmentation performance with three metrics each, following [18, 7, 23].  
+For evaluating the detection performance, we measure the area under the receiver-operator curve (AUROC), the F1-score at the optimal threshold (F1-max), and the average precision (AP) using the respective image-level anomaly scores.  
+We quantify the anomaly segmentation performance using the AUROC, F1-max, and the per-region overlap (PRO, [2]) of the segmentation using the pixel-wise anomaly scores.  
+Note that due to a high imbalance of nominal and anomalous pixels— for MVTec-AD we have 97.26% nominal pixel, for VisA even 99.45% [23]—it is not recommended to assess performance solely on segmentation AUROC [31].  
+We repeat each experiment three times and report mean and standard deviation.  
+
+**Baselines**  
+We compare AnomalyDINO with a range of modern zero- and few-shot AD models, e.g., SPADE [8], PaDiM [10], PatchCore [33], WinCLIP+ [18], and APRIL-GAN [7].  
+It is important to note that ACR [21] and MuSc [23] consider the batched zero-shot setting (see Ta- ble 1), thus, covering a different setting than Anomaly-DINO.  
+We adapt AnomalyDINO to this setting in Appendix D.  
+Moreover, APRIL-GAN and AnomalyCLIP, require training on a related dataset, which is in contrast to our proposed training-free method.  
+In Tables 2 and 3, results reported by [18] are indicated by †, the result of the WinCLIP re-implementation by [20] (where J. Jeong is also coauthor) by ∗.  
+All other results are taken from the original publication. For ADP [20] we report the (usually slightly better) variant ADPℓ (with access to the class label).  
+For GraphCore no standard deviations are reported [41].  
+
+### 4.1 Few-Shot Anomaly Detection and Anomaly Segmentation
+
+Results We summarize the results for few-shot anomaly detection on MVTec-AD and VisA in Table 2 and Table 3, respectively.  
+Regarding MVTec-AD, our method achieves state-of-the-art k-shot detection performance across all k ∈ 1,2,4,8,16 for every reported metric, outperforming approaches that require additional training data sets (such as ADP and APRIL-GAN).  
+The method also demonstrates superior anomaly localization, with results showing that while detection performance remains comparable across different resolutions (448 vs. 672), a higher resolution enhances localization performance.  
+Furthermore, we observe clear improvements as the number of samples increases.  
+In terms of anomaly detection in the VisA benchmark (Table 3), APRIL-GAN demonstrates the strongest performance for k ∈{1,2}.  
+Nonetheless, AnomalyDINO consistently achieves second-best results for k ∈{1,2}, comparable results in the 4-shot setting, and sets new state-of-the-art for k ∈ {8,16}.  
+This can be attributed to Anomaly-DINO’s ability to benefit more from a richer memory bank M than APRIL-GAN.  
+We hypothesize that meta-learning exerts a greater influence on APRIL-GAN (i.e., training on MVTec-AD, when testing on VisA, and vice-versa) compared to learning from the nominal features of the given reference samples.  
+Note also that AnomalyDINO outperforms all other training-free approaches.  
+
+Table 2: **Anomaly detection on MVTec-AD.**  
+Quantitative results for detection (image-level) and segmentation (pixel-level).  
+For each shot, we highlight the best result in bold, the results from the second best method as underlined, and the best training-free result by a gray box (see also Table 1).  
+All results in %.
+![Table2](images/Table2.png)  
+
+Table 3: Anomaly detection on VisA. Quantitative results for detection (image-level) and segmentation (pixel-level).  
+For each shot, we highlight the best result in bold, the results from the second best method as underlined, and the best training-free result by a gray box (see also Table 1).  
+All results in %.  
+![Table3](images/Table3.png)  
+
+Comparing the segmentation performance on VisA, Table 3 reveals a clear picture: AnomalyDINO consistently shows the strongest localization performance in all metrics considered.  
+While AnomalyDINO-S (448) already demonstrates strong performance, the advantages of using a higher resolution (672) become more evident on the VisA dataset.  
+We attribute this fact to smaller anomalous regions (for which smaller effective patch sizes are beneficial) and more complex scenes (compared to MVTec-AD).  
+We have further adapted AnomalyDINO to the batched zero-shot setting (see Appendix D). This adaptation is straightforward and relatively simple, especially compared to MuSc.  
+Notably, we did not employ additional techniques such as ‘Re-scoring with Constrained Image-level Neighborhood’ or ‘Local Neighborhood Aggregation with Multiple Degrees’ [23].  
+The results obtained, as detailed in Table 4, are therefore quite satisfactory.  
+
+We conclude that AnomalyDINO—despite its simplicity—rivals other methods in all settings and even comes out ahead in most of the settings (e.g., significantly reducing the gap between few-shot and full-shot methods for MVTec-AD).  
+Within the class of training-free models, it is the clear winner essentially across the board.
+These results do not only demonstrate the virtues of AnomalyDINO itself but, more generally, highlight the merits of strong visual features as compared to highly engineered architectures.  
+We provide further qualitative results in Appendix A, and discuss the limitations (such as detecting semantic anomalies) and specific failure cases of our approach in Appendix B.  
+
+Table 4: **Detection results for other settings.** All results are AUROC values (in %).  
+![Table4](images/Table4.png)  
+
+### 4.2 Ablation Study
+
+We conduct additional experiments to assess the effect of specific design choices in our pipeline.  
+The full ablation study is provided in Appendix C, here we briefly summarize the main insights.  
+Figure 3 supports the ablation study by highlighting the two key aspects: performance and runtime.  
+Inference time Comparing the inference times of AnomalyDINO with the other approaches in the 1-shot setting (see Figure 3), we observe that AnomalyDINO achieves significantly faster inference times than SOTA few-shot competitors (note the logarithmic scale).  
+For example, AnomalyDINO-S takes roughly 60ms to process an image at a resolution of 448.  
+The only approaches with lower inference time are PatchCore and AnomalyDINO with ViT-backbones trained on ImageNet, which however sacrifice performance. Notably, while augmentations increase the memory bank, and thus, the potential runtime of the nearest neighborhood search, we find that the effect is negligible in practice.5 A more detailed runtime analysis is included in Appendix C, Table 9.  
+
