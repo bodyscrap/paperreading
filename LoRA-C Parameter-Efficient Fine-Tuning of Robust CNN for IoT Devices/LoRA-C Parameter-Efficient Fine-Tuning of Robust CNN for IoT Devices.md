@@ -181,3 +181,99 @@ $$
 $$
 y^{(n)} = \mathbf{W}^{(n)} \otimes x , \tag{3}
 $$
+
+ここで、位置 $(i,j)$ における特徴マップ $y^{(n)}$ の値は以下のように計算できる：
+
+$$
+y^{(n)}_{i,j} = \sum_{m=1}^{c_{in}} \sum_{u=1}^{k} \sum_{v=1}^{k} W^{(n)}_{m,u,v} \cdot x_{m,i-u+1,j-v+1} . \tag{4}
+$$
+
+既存の研究のほとんどは、Transformerアーキテクチャに基づくモデルのfine-tuningにLoRAを使用しており、CNNを対象としたLoRAの研究はほとんどない。  
+IoTデバイスにおけるCNNの幅広い応用を考慮し、本稿ではCNNモデルのfine-tuningにLoRAを使用することを研究する。  
+Transformerベースのアーキテクチャをfine-tuningする際、LoRAの$\mathbf{BA}$は $\mathbf{Q, K, V}$ 行列として機能する。  
+では、LoRAはどのように効率的にCNNと組み合わせられるのだろうか?  
+
+### 3.3 Design of LoRA-C
+
+![figure3](images/figure3.png)  
+Fig. 3: 手案手法 LoRA-C
+
+このセクションでは、まずLoRA-Cを紹介し、次にこの設計の理由を説明する。  
+**LoRA-C**:  
+Fig. 3は、CNNのfine-tuningのための畳み込み層ごとの低ランク分解法である、提案手法LoRA-Cを示す。  
+入力チャンネル $c_{in}$ と出力チャンネル $c_{out}$ を持つ畳み込み層に対して、事前学習済み畳み込み重み $\mathbf{W}_0 \in \mathbb{R}^{c_{out} \times c_{in} \times k \times k}$ は、fine-tuning中に更新されない勾配を除去することで凍結される。  
+すなわち、重みの更新増分 $\Delta W$ を $\mathbf{A}$ と $\mathbf{B}$ の2つの行列に分解する。  
+ここで、$\mathbf{A}$ は $\mathbb{R}^{r \times c_{in} \times k}$、$\mathbf{B}$ は $\mathbb{R}^{c_{out} \times k \times r}$ である。  
+LoRAと同様に、LoRA-Cでも新たに追加されたパラメータの重みを調整するために定数 $\alpha$ を導入しており、fine-tuningの更新はEq. 5で記述できる：  
+
+$$
+\mathbf{W} = \mathbf{W}_0 + \alpha\Delta \mathbf{W} = \mathbf{W}_0 + \alpha\mathbf{B}\mathbf{A} . \tag{5}
+$$
+
+ここで、fine-tuningによってもたらされる事前学習済み重み $\mathbf{W}_0$ の増分は $\mathbf{B}\mathbf{A}$ と等価である。  
+ここで、$\mathbf{BA}\in \mathbb{R}^{c_{out} \times k \times c_{in} \times k}$ である。
+行列 $\mathbf{Reshape(BA)}$ は、訓練前の重み $\mathbf{W}_0$ に等しい次元を持つテンソルに再形成することができる。
+すなわち、$\mathbf{Reshape(BA)} \in \mathbb{R}^{c_{out} \times c_{in} \times k \times k}$ となる。  
+行列 $\mathbf{A}$ と $\mathbf{B}$ の初期化については、LoRAの設定に従い、行列 $\mathbf{B}$ ゼロ行列 $Z$ を設定し、行列$\mathbf{A}$ をKaiming一様分布 $\Mu(-b,b)$ で初期化する。[61]  
+$T$ をランダムな初期テンソルとすると、$\mathbf{A}$ と $\mathbf{B}$ の初期化は以下のようになる：  
+
+$$
+\begin{aligned}
+\mathbb{A} &= U(T ), T ∈R^{r\times c_{in}\times k} \\
+\mathbb{B} &= Z(T ), T ∈R^{c_{out}\times k\times r} . \tag{6}
+\end{aligned}
+$$
+
+LoRA-Cの畳み込み演算の順伝播は以下の通りである :  
+
+$$
+\begin{aligned}
+y &= \(_0 + \alpha \mathbf{BA}\) \otimes x . \tag{7}
+\end{aligned}
+$$
+
+For the rank of ∆W (or BA), we provide two settings of r and r ∗k, while the impact of the two different ranks will be analyzed in Section 3.3.2.  
+
+$\Delta \mathbf{W}$ (または $\mathbf{BA}$ )のランクについては、$r$ と $r ∗ k$ の2つの設定を提供し、2つの異なるランクの影響はセクション3.3.2で分析する。
+
+#### 3.3.1 Decomposed Matrices Granularity
+
+LoRAのfine-tuningのメカニズムをCNNモデルに適用するため、畳み込み層の構造に適応するようにlayer-wiseの粒度を修正した。  
+ではなぜ、より細かいカーネル単位ではなく、レイヤー単位の分解行列を選んだのだろうか?  
+パラメトリック効率の観点から、レイヤー単位の分解行列の粒度の選択について分析する。  
+完全なfine-tuningの場合、事前学習済みの重み $\mathbf{W}_0$ に対して更新されるパラメータの数は次のようになる:  
+
+$$
+P_{full_ft} = c_{out} \cdot c_{in}\cdot k^2. \tag{8}
+$$  
+
+LoRA技術を利用することで、畳み込み重みの更新パラメータ数を減らすことを目指す。  
+既存のattenntion での LoRAの経験に基づき、まず、LoRA-Cでは、各畳み込みカーネルに行列 $\mathbf{BA}$ を割り当ててfine-tuningすること、つまりカーネルごとに分解行列を割り当てることを考える。  
+$\mathbf{W}^{(i)} \in \mathbb{R}^{c_{in} \times k \times k}$ を出力チャンネル $i$ における $i$ 番目の畳み込みカーネルとし、$0 < i < c_{out}$ とする。  
+すると、各 $\mathbf{W}^{(i)}$ に対して、ランク $r$ の低ランク行列 $\mathbf{A}^{(i)}$ と $\mathbf{B}^{(i)}$ の組を導入することができる。ここで、$\mathbf{A}^{(i)} \in \mathbb{R}^{r \times c_{in} \times k}$、$\mathbf{B}^{(i)} \in \mathbb{R}^{k \times r}$ である。
+
+すなわち、1つのカーネルの更新はEq .9で与えられる:
+
+$$
+\mathbf{W}^{(i)} = \mathbf{W}^{(i)}_0 + \alpha\Delta\mathbf{W}^{(i)} = \mathbf{W}^{(i)}_0 + \alpha\mathbf{B}^{(i)}\mathbf{A}^{(i)} , \tag{9}
+$$
+
+kernel-wiseにおける畳み込みの順伝播は以下の通りである:  
+
+$$
+y^{(i)} = ( \mathbf{W}^{(i)}_0 + \alpha \mathbf{B}^{(i)} \mathbf{A}^{(i)}) \otimes x . \tag{10}
+$$
+
+カーネル単位の分解の場合、$\mathbf{A}^{(i)}$ と $\mathbf{B}^{(i)}$ のパラメータ数は $c_{in} \cdot r \cdot k + r \cdot k$ となり、1つの畳み込み層には $c_{out}$ 個のカーネルが存在する。  
+よって、カーネル単位の分解行列に対する更新パラメータの数は次のようになる:  
+
+$$
+P_{kernel-wise} = c_{out} \cdot (c_{in} \cdot r \cdot k + r \cdot k). \tag{11}
+$$
+
+*Layer-Wise Decomposed Matrices*:  
+畳み込み層の畳み込み重みをfine-tuningするために、ランク $r$ の分解行列のペアを使用するlayer-wize分解の場合、対応する更新されたパラメータの数は Eq .12で記述することができる：
+
+$$
+P_{layer-wise} = (c_{out} + c_{in}) \cdot r \cdot k . \tag{12}
+$$
