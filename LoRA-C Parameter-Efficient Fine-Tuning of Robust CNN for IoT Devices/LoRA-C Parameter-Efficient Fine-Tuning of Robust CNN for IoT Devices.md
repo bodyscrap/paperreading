@@ -228,11 +228,9 @@ LoRA-Cの畳み込み演算の順伝播は以下の通りである :
 
 $$
 \begin{aligned}
-y &= \(_0 + \alpha \mathbf{BA}\) \otimes x . \tag{7}
+y &= \left(\mathbf{W}_0 + \alpha \mathbf{BA}\right) \otimes x . \tag{7}
 \end{aligned}
 $$
-
-For the rank of ∆W (or BA), we provide two settings of r and r ∗k, while the impact of the two different ranks will be analyzed in Section 3.3.2.  
 
 $\Delta \mathbf{W}$ (または $\mathbf{BA}$ )のランクについては、$r$ と $r ∗ k$ の2つの設定を提供し、2つの異なるランクの影響はセクション3.3.2で分析する。
 
@@ -244,7 +242,7 @@ LoRAのfine-tuningのメカニズムをCNNモデルに適用するため、畳�
 完全なfine-tuningの場合、事前学習済みの重み $\mathbf{W}_0$ に対して更新されるパラメータの数は次のようになる:  
 
 $$
-P_{full_ft} = c_{out} \cdot c_{in}\cdot k^2. \tag{8}
+P_{full\_ft} = c_{out} \cdot c_{in}\cdot k^2. \tag{8}
 $$  
 
 LoRA技術を利用することで、畳み込み重みの更新パラメータ数を減らすことを目指す。  
@@ -277,3 +275,37 @@ $$
 $$
 P_{layer-wise} = (c_{out} + c_{in}) \cdot r \cdot k . \tag{12}
 $$
+
+*Updated Parameters Reduction*:  
+低ランク分解の2つの異なるLoRA-Cの粒度(カーネル単位とレイヤー単位)について、それぞれ完全なfine-tuningと比較して更新されたパラメータの数を分析する。  
+直感的な比較のために、LoRA-Cの2つの粒度のパラメータに対して、完全なfine-tuninguの更新パラメータ量に対する比率を選択する。  
+カーネル分解でのこの比率はEq .13で計算できる。
+
+$$
+\begin{array}{rcl}
+R_{kernel\_wise} &=& \frac{P_{kernel\_wise}}{P_{full\_ft}} = \frac{c_{out} \cdot (c_{in} \cdot r \cdot k + r \cdot k)}{c_{out} \cdot c_{in} \cdot k^2} \\
+ &=& \frac{c_{in} \cdot r + r}{c_{in} \cdot k}
+\end{array}
+.  \tag{13}
+$$
+
+$R_{kernel\_wise} \ge \frac{c_{in}\cdot k+k}{c_{in}\cdot k} > 1$ として、$r\ge k$ のとき、kerner_wiseにおけるパラメータ数は完全なfine-tuningのものより大きくなることがわかる。  
+例えば、代表的なCNNであるResNetの場合、カーネルサイズ $k$ は通常 $1$ か $3$ の値をとるので、正の利得を得るためには $r$ は $3$ より大きくならないはずである。  
+しかし、Section 4.6のablation studiesにあるように、$r$ が小さすぎる場合、このモデルは通常うまく機能しない。  
+したがって、カーネル単位のLoRA-Cの設計は、性能とパラメトリック効率のバランスをとるのが難しい。
+レイヤーワイズ分解のでのこの比率は以下の通りである：
+
+$$
+\begin{array}{rcl}
+R_{layer\_wise} &=& \frac{P_{layer\_wise}}{P_{full\_ft}} = \frac{(c_{out} + c_{in}) \cdot r \cdot k}{c_{out} \cdot c_{in} \cdot k^2}\\
+&=& \frac{(c_{out} + c_{in}) \cdot r}{c_{out} \cdot c_{in} \cdot k}
+\end{array}
+. \tag{14}
+$$
+
+レイヤーごとの粒度では、パラメータ数は主に $c_{out},c_{in},r,k$ に依存する。  
+コンピュータ・ビジョンで典型的に用いられるCNNでは、$c_{out}$ と $c_{in}$ は一般に3より大きい(あるいはもっと大きい、例えば $64, 128, 256, \ldots$ ので、$c_{out} + c_{in}$ は通常 $c_{out} \cdot c_{in}$ より小さい。  
+例えば、$c_{in} = 256, c_{out} = 512$、ランク $r = 128, k = 1$ の畳み込みでは、$R_{layer\_wise} = \frac{(512+256) \cdot 128 }{ (512 \cdot 256 \cdot 1)} = 0.75 < 1$ となり、 より高いランク$r$（$r = 128 \gg k = 1$）で更新されたパラメータ削減の正の利得を維持する。
+
+パラメータのインフレを引き起こすkernel-wiseの分解に比べ、layer-wiseの分解は更新のためのfine-tuningパラメータが少ない。  
+そこで、LoRA-Cではレイヤーワイズ分解行列を選択する。  
