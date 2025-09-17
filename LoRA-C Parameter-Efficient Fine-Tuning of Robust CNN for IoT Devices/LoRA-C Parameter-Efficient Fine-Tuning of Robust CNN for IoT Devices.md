@@ -378,3 +378,141 @@ IoT デバイスは、増分更新の部分のみを維持すればよい。
 最後に、他のいくつかの再パラメータ化技術[40]、例えばバッチ正規化融合によって、モデルをさらに合理化することができる。  
 この場合、推論用のLoRA-C CNNモデルのニューラル・アーキテクチャは、事前に訓練されたものと全く同じである。  
 そのため、推論レイテンシの面でIoTのサービス品質が低下することはない。  
+
+## 4 EXPERIMENTS
+
+Then, we conduct experimental comparisons and present analyses.  
+このSectionでは、データセット、ベースライン、実装の詳細など、我々の実験セットアップを紹介する。  
+次に、実験的な比較を行い、分析を示す。  
+
+### 4.1 Experimental Setup
+
+**Datasets**.  
+CIFAR-10、CIFAR-100、CIFAR-10-C、Icons-50の4つのベンチマークデータセットで実験を行った。  
+CIFAR-10とCIFAR-100は2つの標準データセットであり、CIFAR-10-CとIcons-50は破損データセットとして使用した。  
+このうち、CIFAR-10-Cの検証セットにはノイズが混入しており(ノイズ見え方についてはFig. 5を参照)、Icons-50のトレーニングデータとテストデータのスタイルはかなり異なっている(見え方ににいてはFig .6を参照)。  
+の学習データとテストデータのスタイルがかなり異なっている（可視化は図6を参照）。  
+
+- CIFAR-10とCIFAR-100 [62]は、画像分類のためのマルチクラス自然画像データセットである。  
+これらは、10/100カテゴリに分類された50,000枚の学習画像と10,000枚のテスト画像から構成される。  
+各画像の解像度は32×32ピクセルである。
+- CIFAR-10-C [63]は、CIFAR-10テストセットに合成共通摂動とノイズ破損を使用した後のテストデータセットです。  
+これは、4つのカテゴリーに分類された19種類の損傷からなる10,000枚のテスト画像で構成されている。  
+各画像の解像度は32×32ピクセルである。
+- Icons-50 [63]は、様々な企業から収集された50のカテゴリーに分類された10,000の画像から構成されています。  
+すべての画像の解像度を32×32ピクセルに設定しました。  
+トレーニング用には、1社のデータをテストデータとして保持し、残りの企業のデータをトレーニングデータとして使用します。
+
+CIFAR-10-CデータセットとIcons-50データセットの詳細については[41]を参照。
+
+**Baselines**.  
+ResNet-18/-34/-50/-101[25]を含むRestNetシリーズをベースラインとしている。  
+
+**Implementation Details**.  
+我々は、Python 3.8とPyTorch 2.2、CUDA 12.1で本手法を実装した。すべての実験はNVIDIA RTX 4090 GPUで実行されています。  
+PyTorchが提供するImageNet-1KのResNetシリーズ（ResNet-18/-34/-50/-101）の学習済みの重みを使用し、ResNetの最初の7×7畳み込みを3×3畳み込みに置き換え、32×32の画像データを処理する。  
+さらに、出力ヘッドはデータセットごとに変更される。  
+モデルを微調整する際、更新されるパラメータには、置き換えられた第1層の $3\times 3$ 畳み込み、最後の全結合層、追加された行列 $\mathbf{A, B}$が含まれ、その他のパラメータは勾配を除去することで凍結される。  
+$r$ を $\{ 1,2,4,8,16,32,64 \}$ に、$\alpha$ を $\{1,2,4,8,16,32,64,128\}$ に設定して走査する。  
+すべてのデータセットにSGDオプティマイザを使用し、重み減衰を5e-4、初期学習率を0.1に設定する。  
+
+### 4.2 Experimental Results
+
+#### 4.3 The amount of Fine-Tuning Parameters
+
+提案手法LoRA-Cは、フルモデルパラメータを微調整するのに比べ、モデル更新パラメータ数を1桁削減する。  
+Fig .7に示すように、フルパラメータfine-tuning ResNet-18と比較して、LoRA-C-ResNet-18のパラメータfine-tuningは最大約99.35%削減される。  
+LoRA-C-ResNet-101のパラメータfine-tuningは、フルパラメータfine-tuning ResNet-101と比較して、最大約99.21%削減される。  
+LoRA-Cベースのfine-tuningは、バックボーンモデルのパラメータを凍結し、新たに追加されたパラメータのみを微調整する。  
+新たに追加されたパラメータの数は少なく、LoRA-Cが畳み込み層単位で低ランク分解を行うため、モデルの微調整パラメータ数を効果的に削減する。  
+
+![figure7](images/figure7.png)  
+Fig. 7: 各種LoRA-Cの更新パラメータと標準モデルの比較。 
+
+### 4.4 Results on Standard Benchmarks
+
+TABLE 1: Comparison between training from scratch (SCR), full fine-tuning (FT), and LoRA-C on CIFAR-10/-100 datasets.  
+Our results are highlighted with shading. #P and #P (LoRA-C.) refer to the number of parameters that need to be updated when training models and when using our proposed method, respectively.  
+Our method achieves better performance with less number of updated parameters.
+![table1](images/table1.png)  
+
+The proposed LoRA-C achieves improved model performance with only a few parameters fine-tuned.  
+As shown in Table 1, on the CIFAR-10 dataset, based on ResNet-18, our proposed LoRA-C achieves 95.69% accuracy, surpassing the training from scratch (SCR) result by +0.24%.  
+On the CIFAR-100 dataset, our proposed LoRA-C achieves 79.93% accuracy, surpassing the SCR result by +3.05%.  
+This is mainly because LoRA-C relies on the existing knowledge learned by the model on ImageNet.  
+When the main model is frozen, and only the newly added parameters are updated, it is equivalent to allowing the new branches to learn specific features based on the knowledge learned by the model on ImageNet.  
+Therefore, the LoRA-C can achieve higher accuracy than training the model from scratch.  
+The proposed LoRA-C can improve the model performance when the model accuracy is relatively low.  
+As shown in Table 1, our proposed LoRA-C significantly outperforms SCR. On the CIFAR-100 dataset, based on ResNet-34, our proposed LoRA-C surpasses the SRC by +4.11%.  
+Based on ResNet-50, our proposed LoRA-C surpasses the SCR by +5.29%.  
+The low performance of the model indicates that it is difficult for the model to extract effective features from the current dataset.  
+LoRA-C can achieve high accuracy because it uses a pre-trained model, that is, it extracts effective features based on the existing knowledge of the pre-trained model.  
+It can also be understood that based on the pre-trained model, the newly added network branch is easier to update parameters through gradient descent.  
+As the model capacity increases, the model accuracy improves more significantly.  
+As shown in Table 1, on the CIFAR-10 dataset, based on ResNet-18, LoRA-C improves accuracy by 0.24% compared to SCR.  
+Based on ResNet-34, LoRA-C improves accuracy by 0.98% compared to SCR.  
+Based on ResNet-101, LoRA-C improves accuracy by 1.33% compared to SCR. Compared with simple-structured models processing complex data, complex-structured models can achieve higher performance when processing complex data.  
+Complex models are more likely to fall into the gradient vanishing problem, which makes it impossible to effectively update model parameters.  
+However, once the parameters can be effectively updated through gradient descent, their performance often exceeds that of simple models.  
+LoRA-C uses the pre-trained model to update parameters so that the newly added branches can effectively use gradient descent to update their parameters, thereby significantly improving the performance of large-capacity CNN models.  
+The full fine-tuning (FT) and SCR have similar accuracy.  
+In some cases, the accuracy of FT is even lower than that of SCR. For example, based on ResNet-18, on CIFAR-10 dataset, The accuracy of SCR is higher than that of FT.  
+Based on ResNet-34, the accuracy of SCR is lower than that of FT.  
+This may be due to the overfitting problem of FT.  
+
+### 4.5 Results on Robustness
+
+#### 4.5.1 Limited Training data
+
+![figure8](images/figure8.png)  
+Fig. 8: Robustness to limited training data.  
+
+LoRA-C outperforms standard CNN with limited training data, as shown in Fig. 8. The backbone network is learned on the ImageNet dataset.  
+According to the characteristics of the CNN model, learning on this basis is conducive to the gradient transfer of the model.  
+It is more conducive to obtaining parameters enabling the model to perform well.  
+
+#### 4.5.2 Corrupted Data
+
+The proposed LoRA-C significantly improves the performance of handling corrupted data.  
+As shown in Table 2, based on ResNet-34, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 5.9%.  
+Based on ResNet-50, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 7.81%.  
+It is worth mentioning that the LoRA-C-based fine-tuning method achieves better performance in all categories, as shown in Table 2.  
+In LoRA-C, the backbone network parameters are frozen and will not be updated with local data.  
+The parameters of the backbone network are obtained based on ImageNet training, which means that the backbone network retains the knowledge learned on ImageNet.  
+On the one hand, based on the backbone network, the knowledge learned by the backbone network on ImageNet can improve performance by using local data to fine-tune the newly added model parameters.  
+On the other hand, the parameters of the backbone model are frozen, which can play a regularization role.  
+Therefore, the proposed LoRA-C can achieve better results on the corrupted dataset that is, LoRA-C has strong robustness.
+
+#### 4.5.3 Data Under Different Styles
+
+The proposed LoRA-C achieves high performance when dealing with different training and test data styles.  
+As shown in Table 3, based on ResNet-18, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 6.57%.  
+Based on ResNet-34, compared to the accuracy of SCR, LoRA-C has an accuracy improvement 8.48%.  
+In addition, similar to those obtained with corrupted data, the LoRA-C-based fine-tuning method achieves better performance in all categories.  
+The reasons for this are the same as in Section 4.5.2: (i) Learning is performed based on the existing knowledge of the backbone network. (ii) The parameters of the backbone model are frozen, regularizing the model with the newly added parameters. The above results prove that the proposed LoRA-C is highly robust.
+
+### 4.6 Hyperparameter Study
+
+Two hyperparameters have a great impact on the LoRA-C, namely α and r.  
+The α measures the proportion of newly added branches compared to the backbone network.  
+The larger the α, the greater the proportion of newly added branches, and vice versa.  
+The r represents the rank of ∆W.  
+The larger r is, the more parameters are fine-tuned, and vice versa.  
+Figs. 9 and 10 illustrate the relationship between model accuracy and α for a given r.  
+We observe that the performance of the LoRA-C does not always improve with the increase of α.  
+For example, when r = 2, LoRA-C achieves the highest accuracy when α = 4.  
+When r = 4, LoRA-C achieves the highest accuracy when α = 8.  
+When r = 64, LoRA-C achieves the highest accuracy when α = 128.  
+We also observe that the best performance is usually obtained when α r = 2, as shown in Figs. 9 and 10.  
+We also illustrate the relationship between model accuracy and r for a given α, as shown in Fig. 11 and Fig. 12.  
+We observe that (i) the best performance is usually obtained when α r = 2. (ii) When fine-tuning, it is not the case that the more parameters updated, the better.
+In addition, We also illustrate the relationship between model accuracy and r for a given α on CIFAR-10-C dataset, as shown in Fig. 13.  
+The best performance is usually obtained when α r = 2.  
+This discovery provides experience for the widespread application of LoRA-C.  
+
+## 5 CONCLUSION AND FUTURE WORK
+
+This paper proposes a fine-tuning method for robust CNNs for IoT devices, LoRA-C, which performs low-rank decomposition in convolutional layers to reduce the number of fine-tuning parameters.  
+By setting the ratio of α, which controls the proportion of newly added branches, to the rank of the weight matrix to a constant, the accuracy of the fine-tuned model significantly exceeds that of the fully trained model.  
+Experimental results on CIAFR-10, CIFAR-100, CIFAR-10-C, and Icons50 datasets demonstrate the effectiveness of the proposed LoRA-C.  
+Given that LoRA-C effectively improves the robustness of the CNN model, this motivates our future work to start from the following two points: (i) Set α to be learnable, and it will learn the optimal value according to the value of r during model training. (ii) Apply LoRA to MonoCNN or SineFM to explore how to use LoRA to fine-tune the CNN model based on nonlinear mapping.  
