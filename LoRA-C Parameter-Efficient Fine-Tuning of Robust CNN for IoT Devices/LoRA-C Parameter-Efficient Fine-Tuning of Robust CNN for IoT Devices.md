@@ -549,7 +549,14 @@ This discovery provides experience for the widespread application of LoRA-C.
 
 ## 5 CONCLUSION AND FUTURE WORK
 
-This paper proposes a fine-tuning method for robust CNNs for IoT devices, LoRA-C, which performs low-rank decomposition in convolutional layers to reduce the number of fine-tuning parameters.  
-By setting the ratio of α, which controls the proportion of newly added branches, to the rank of the weight matrix to a constant, the accuracy of the fine-tuned model significantly exceeds that of the fully trained model.  
-Experimental results on CIAFR-10, CIFAR-100, CIFAR-10-C, and Icons50 datasets demonstrate the effectiveness of the proposed LoRA-C.  
-Given that LoRA-C effectively improves the robustness of the CNN model, this motivates our future work to start from the following two points: (i) Set α to be learnable, and it will learn the optimal value according to the value of r during model training. (ii) Apply LoRA to MonoCNN or SineFM to explore how to use LoRA to fine-tune the CNN model based on nonlinear mapping.  
+本論文では、IoTデバイス向けロバストCNNの微調整手法LoRA-Cを提案した。  
+LoRA-Cは、畳み込み層で低ランク分解を行い、微調整パラメータ数を削減する。  
+新たに追加される枝の割合を制御する $\alpha$ と重み行列のランクの比率を一定にすることで、微調整されたモデルの精度は、完全に訓練されたモデルの精度を大幅に上回る。  
+CIFAR-10、CIFAR-100、CIFAR-10-C、Icons50データセットでの実験結果は、提案するLoRA-Cの有効性を示している。  
+LoRA-CがCNNモデルのロバスト性を効果的に向上させることを考えると、以下の2点から始めることが今後の研究の動機付けとなる：  
+(i) Set α to be learnable, and it will learn the optimal value according to the value of r during model training.  
+(ii) Apply LoRA to MonoCNN or SineFM to explore how to use LoRA to fine-tune the CNN model based on nonlinear mapping.  
+
+(i) $\alpha$ を学習可能に設定し、モデル学習時の $r$ の値に応じて最適値を学習する。  
+(ii)MonoCNNやSineFMにLoRAを適用し、非線形写像に基づくCNNモデルの微調整にLoRAを利用する方法を探る。  
+
