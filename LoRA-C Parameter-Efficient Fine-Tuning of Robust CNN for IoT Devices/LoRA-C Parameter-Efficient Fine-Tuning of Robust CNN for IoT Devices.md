@@ -159,7 +159,7 @@ $$
 
 ここで $\alpha$ は定数である。  
 LoRA の設定は、$A$ をランダムなガウス分布で初期化し、$B$ をすべてゼロにする。  
-$r << \min(d,k)$ なので、$W_0$ に比べて $\Delta W$ のパラメータ数は非常に少ない。  
+$r \ll \min(d,k)$ なので、$W_0$ に比べて $\Delta W$ のパラメータ数は非常に少ない。  
 加えて、推論中、$\Delta W$ はモデルアーキテクチャーを変更することなく、追加の推論オーバーヘッドを発生させることなく、$W_0$ に完全に追加することができる。  
 
 **畳み込み層[26]、[59]、[60]** :  
@@ -431,34 +431,36 @@ Fig. 7: 各種LoRA-Cの更新パラメータと標準モデルの比較。
 
 ### 4.4 Results on Standard Benchmarks
 
-TABLE 1: Comparison between training from scratch (SCR), full fine-tuning (FT), and LoRA-C on CIFAR-10/-100 datasets.  
-Our results are highlighted with shading. #P and #P (LoRA-C.) refer to the number of parameters that need to be updated when training models and when using our proposed method, respectively.  
-Our method achieves better performance with less number of updated parameters.
+TABLE 1： CIFAR-10/-100データセットにおけるゼロからの学習(SCR)、full fine-tuning(FT)、LoRA-Cの比較。  
+我々の結果は網掛けでハイライトされている。#Pと#P(LoRA-C.)はそれぞれ、モデル学習時と提案手法使用時に更新が必要なパラメータ数を示す。  
+本手法は、より少ないパラメータ更新数で、より高い性能を達成している。
 ![table1](images/table1.png)  
 
-The proposed LoRA-C achieves improved model performance with only a few parameters fine-tuned.  
-As shown in Table 1, on the CIFAR-10 dataset, based on ResNet-18, our proposed LoRA-C achieves 95.69% accuracy, surpassing the training from scratch (SCR) result by +0.24%.  
-On the CIFAR-100 dataset, our proposed LoRA-C achieves 79.93% accuracy, surpassing the SCR result by +3.05%.  
-This is mainly because LoRA-C relies on the existing knowledge learned by the model on ImageNet.  
-When the main model is frozen, and only the newly added parameters are updated, it is equivalent to allowing the new branches to learn specific features based on the knowledge learned by the model on ImageNet.  
-Therefore, the LoRA-C can achieve higher accuracy than training the model from scratch.  
-The proposed LoRA-C can improve the model performance when the model accuracy is relatively low.  
-As shown in Table 1, our proposed LoRA-C significantly outperforms SCR. On the CIFAR-100 dataset, based on ResNet-34, our proposed LoRA-C surpasses the SRC by +4.11%.  
-Based on ResNet-50, our proposed LoRA-C surpasses the SCR by +5.29%.  
-The low performance of the model indicates that it is difficult for the model to extract effective features from the current dataset.  
-LoRA-C can achieve high accuracy because it uses a pre-trained model, that is, it extracts effective features based on the existing knowledge of the pre-trained model.  
-It can also be understood that based on the pre-trained model, the newly added network branch is easier to update parameters through gradient descent.  
-As the model capacity increases, the model accuracy improves more significantly.  
-As shown in Table 1, on the CIFAR-10 dataset, based on ResNet-18, LoRA-C improves accuracy by 0.24% compared to SCR.  
-Based on ResNet-34, LoRA-C improves accuracy by 0.98% compared to SCR.  
-Based on ResNet-101, LoRA-C improves accuracy by 1.33% compared to SCR. Compared with simple-structured models processing complex data, complex-structured models can achieve higher performance when processing complex data.  
-Complex models are more likely to fall into the gradient vanishing problem, which makes it impossible to effectively update model parameters.  
-However, once the parameters can be effectively updated through gradient descent, their performance often exceeds that of simple models.  
-LoRA-C uses the pre-trained model to update parameters so that the newly added branches can effectively use gradient descent to update their parameters, thereby significantly improving the performance of large-capacity CNN models.  
-The full fine-tuning (FT) and SCR have similar accuracy.  
-In some cases, the accuracy of FT is even lower than that of SCR. For example, based on ResNet-18, on CIFAR-10 dataset, The accuracy of SCR is higher than that of FT.  
-Based on ResNet-34, the accuracy of SCR is lower than that of FT.  
-This may be due to the overfitting problem of FT.  
+提案したLoRA-Cは、数個のパラメータをfine-tuningするだけで、モデル性能の向上を達成する。  
+TABLE 1に示すように、ResNet-18をベースとしたCIFAR-10データセットにおいて、提案手法LoRA-Cは95.69%の精度を達成し、ゼロからの学習(SCR)の結果を+0.24%上回った。  
+CIFAR-100データセットでは、79.93%の精度を達成し、SCRを+3.05%上回った。  
+これは主に、LoRA-CがImageNet上でモデルが学習した既存の知識に依存しているためである。  
+メインモデルが凍結され、新しく追加されたパラメータのみが更新される場合、ImageNet上のモデルで学習された知識に基づいて、新しいブランチに特定の特徴を学習させることと同じである。  
+したがって、LoRA-Cはモデルをゼロから学習するよりも高い精度を達成することができる。  
+提案するLoRA-Cは、モデルの精度が比較的低い場合に、モデルの性能を向上させることができる。  
+TABLE1に示すように、提案するLoRA-CはSCRを大幅に上回る。  
+ResNet-34ベースではCIFAR-100データセットでは、提案LoRA-CはSRCを+4.11%上回った。  
+ResNet-50ベースでは、提案LoRA-CはSCRを+5.29%上回る。  
+LoRA-Cの性能の低さは、現在のデータセットから有効な特徴を抽出することが困難であることを示している。 
+LoRA-Cが高い精度を達成できるのは、事前に訓練されたモデルを使用するため、つまり、事前に訓練されたモデルの既存の知識に基づいて効果的な特徴を抽出するためである。  
+また、事前に訓練されたモデルに基づいて、新たに追加されたネットワークブランチは、勾配降下によってパラメータを更新することが容易であることも理解できる。  
+モデルの容量が大きくなるにつれて、モデルの精度はより大幅に向上する。  
+TABLE 1に示すように、ResNet-18ベースではCIFAR-10データセットでは、LoRA-CはSCRと比較して0.24%精度が向上している。  
+ResNet-34ベースでは、LoRA-CはSCRと比較して0.98%精度が向上する。  
+ResNet-101ベースでは、LoRA-CはSCRと比較して1.33%精度が向上する。  
+複雑なデータを処理する単純構造モデルに比べ、複雑構造モデルは複雑なデータを処理する際に高い性能を達成できる。  
+複雑なモデルは勾配消失問題に陥りやすく、モデル・パラメーターを効果的に更新することができなくなる。 
+しかし、ひとたび勾配降下によってパラメータを効果的に更新することができれば、その性能は単純なモデルを上回ることが多い。  
+LoRA-Cは事前に訓練されたモデルを使用してパラメータを更新するため、新しく追加された枝は勾配降下を効果的に使用してパラメータを更新することができ、それによって大容量CNNモデルの性能が大幅に向上する。  
+Full fine-tuning(FT)とSCRは同じような精度だ。  
+FTの精度がSCRの精度を下回る場合もある。例えば、ResNet-18に基づくCIFAR-10データセットでは、SCRの精度はFTよりも高い。  
+ResNet-34では、SCRの精度はFTよりも低い。  
+これはFTのオーバーフィッティングの問題によるものと考えられる。  
 
 ### 4.5 Results on Robustness
 
