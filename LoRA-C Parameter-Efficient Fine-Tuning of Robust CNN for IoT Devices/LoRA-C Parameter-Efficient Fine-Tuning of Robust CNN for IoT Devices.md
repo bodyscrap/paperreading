@@ -467,50 +467,85 @@ ResNet-34では、SCRの精度はFTよりも低い。
 #### 4.5.1 Limited Training data
 
 ![figure8](images/figure8.png)  
-Fig. 8: Robustness to limited training data.  
+Fig. 8: 制限したデータに対するロバスト性
 
-LoRA-C outperforms standard CNN with limited training data, as shown in Fig. 8. The backbone network is learned on the ImageNet dataset.  
-According to the characteristics of the CNN model, learning on this basis is conducive to the gradient transfer of the model.  
-It is more conducive to obtaining parameters enabling the model to perform well.  
+Fig. 8に示すように、LoRA-Cは限られた学習データで標準的なCNNを凌駕する。  
+バックボーンネットワークはImageNetデータセットで学習される。  
+CNNモデルの特徴によれば、この基礎に基づく学習は、モデルの勾配伝達を助長する。  
+その方が、モデルがうまく機能するためのパラメータを得るのに適している。  
 
 #### 4.5.2 Corrupted Data
 
-The proposed LoRA-C significantly improves the performance of handling corrupted data.  
-As shown in Table 2, based on ResNet-34, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 5.9%.  
-Based on ResNet-50, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 7.81%.  
-It is worth mentioning that the LoRA-C-based fine-tuning method achieves better performance in all categories, as shown in Table 2.  
-In LoRA-C, the backbone network parameters are frozen and will not be updated with local data.  
-The parameters of the backbone network are obtained based on ImageNet training, which means that the backbone network retains the knowledge learned on ImageNet.  
-On the one hand, based on the backbone network, the knowledge learned by the backbone network on ImageNet can improve performance by using local data to fine-tune the newly added model parameters.  
-On the other hand, the parameters of the backbone model are frozen, which can play a regularization role.  
-Therefore, the proposed LoRA-C can achieve better results on the corrupted dataset that is, LoRA-C has strong robustness.
+提案するLoRA-Cは、破損データの処理性能を大幅に向上させる。  
+表2に示すように、ResNet-34をベースとした場合、SCRの精度と比較して、LoRA-Cは5.9%の精度向上が見られる。  
+また、ResNet-50では、SCRと比較して7.81%の精度向上が見られた。  
+
+Table 2： 一般的な観測可能な破損に対する頑健性。  
+SCRは、モデルがゼロから訓練されることを意味する。  
+FTは、事前に訓練されたモデルに基づいて、新しいデータを使用してすべてのパラメータを微調整することを意味する。  
+我々の結果は網掛けで強調されている。
+![table2](images/table2.png)
+
+TABLE 2に示すように、LoRA-Cベースの微調整法がすべてのカテゴリーでより優れた性能を達成していることは特筆に値する。  
+LoRA-Cでは、バックボーンネットワークパラメータは凍結され、ローカルデータで更新されることはない。  
+バックボーンネットワークのパラメータはImageNetの学習に基づいて得られるため、バックボーンネットワークはImageNetで学習した知識を保持することになる。  
+一方では、バックボーンネットワークに基づいて、ImageNet上でバックボーンネットワークが学習した知識は、新たに追加されたモデルパラメータを微調整するためにローカルデータを使用することにより、パフォーマンスを向上させることができる。  
+一方、バックボーンモデルのパラメータは凍結されているため、正則化の役割を果たすことができる。  
+従って、提案するLoRA-Cは破損したデータセットに対してより良い結果を得ることができ、すなわちLoRA-Cは強いロバスト性を持つ。  
 
 #### 4.5.3 Data Under Different Styles
 
-The proposed LoRA-C achieves high performance when dealing with different training and test data styles.  
-As shown in Table 3, based on ResNet-18, compared to the accuracy of SCR, LoRA-C has an accuracy improvement of 6.57%.  
-Based on ResNet-34, compared to the accuracy of SCR, LoRA-C has an accuracy improvement 8.48%.  
-In addition, similar to those obtained with corrupted data, the LoRA-C-based fine-tuning method achieves better performance in all categories.  
-The reasons for this are the same as in Section 4.5.2: (i) Learning is performed based on the existing knowledge of the backbone network. (ii) The parameters of the backbone model are frozen, regularizing the model with the newly added parameters. The above results prove that the proposed LoRA-C is highly robust.
+提案するLoRA-Cは、異なる訓練データとテストデータを扱う際に高い性能を達成する。  
+
+TABLE 3：異なるスタイルに対するロバスト性。我々の結果は網掛けで強調されている。  
+![table3](images/table3.png)  
+
+Table 3に示すように、ResNet-18をベースとした場合、SCRの精度と比較して、LoRA-Cは6.57%の精度向上を示している。  
+ResNet-34では、SCRと比較してLoRA-Cは8.48%精度が向上している。  
+
+さらに、LoRA-Cに基づくfine-tuning法は、破損したデータで得られたものと同様に、すべてのカテゴリーでより優れた性能を達成している。  
+その理由はセクション4.5.2と同じである。(i) バックボーンネットワークの既存の知識に基づいて学習が行われる。(ii)バックボーンモデルのパラメータを凍結し、新たに追加されたパラメータでモデルを正則化する。以上の結果より、提案するLoRA-Cが高いロバスト性を持つことが証明された。
 
 ### 4.6 Hyperparameter Study
 
-Two hyperparameters have a great impact on the LoRA-C, namely α and r.  
-The α measures the proportion of newly added branches compared to the backbone network.  
-The larger the α, the greater the proportion of newly added branches, and vice versa.  
-The r represents the rank of ∆W.  
-The larger r is, the more parameters are fine-tuned, and vice versa.  
-Figs. 9 and 10 illustrate the relationship between model accuracy and α for a given r.  
-We observe that the performance of the LoRA-C does not always improve with the increase of α.  
-For example, when r = 2, LoRA-C achieves the highest accuracy when α = 4.  
-When r = 4, LoRA-C achieves the highest accuracy when α = 8.  
-When r = 64, LoRA-C achieves the highest accuracy when α = 128.  
-We also observe that the best performance is usually obtained when α r = 2, as shown in Figs. 9 and 10.  
-We also illustrate the relationship between model accuracy and r for a given α, as shown in Fig. 11 and Fig. 12.  
-We observe that (i) the best performance is usually obtained when α r = 2. (ii) When fine-tuning, it is not the case that the more parameters updated, the better.
+![figure9](images/figure9.png)  
+Fig. 9: $r$ に対するCIFAR-10データセットにおける $\alpha$ の影響。  
+
+![figure10](images/figure10.png)  
+Fig. 10: $r$ に対するCIFAR-100データセットにおける $\alpha$ の影響。  
+
+LoRA-Cに大きな影響を与える2つのハイパーパラメータ、すなわち $\alpha$ と $r$ である。  
+$\alpha$ は、バックボーンネットワークと比較して新しく追加されたブランチの割合を測定する。  
+$\alpha$ が大きいほど、新しく追加されるブランチの割合が大きくなり、逆も同様である。  
+$r$ は $\Delta\mathbf{W}$ のランクを表す。  
+$r$ が大きいほど、より多くのパラメータが微調整され、その逆も同様である。  
+Fig. 9とFig. 10は、与えられた $r$ に対するモデル精度と $\alpha$ の関係を示している。  
+LoRA-Cの性能は $\alpha$ の増加によって必ずしも向上しないことがわかる。  
+例えば、$r = 2$ の場合、LoRA-Cは $\alpha = 4$ で最高の精度を達成する。  
+$r = 4$ のとき、LoRA-Cは $\alpha = 8$ で最高の精度を達成する。  
+$r = 64$ のとき、LoRA-Cは $\alpha = 128$ で最高の精度を達成する。  
+また、Fig. 9とFig. 10に示すように、$\alpha r = 2$ のときに最高の性能が得られることが多い。  
+
+![figure11](images/figure11.png)  
+Fig. 11: $\alpha = 8$ のときのCIFAR-10データセットにおける $r$ の影響。
+
+![figure12](images/figure12.png)  
+Fig. 12: $\alpha = 8$ のときのCIFAR-100データセットにおける $r$ の影響。
+
+また、Fig. 11とFig. 12に示すように、与えられた $\alpha$ に対するモデル精度と $r$ の関係も示している。  
+我々は、(i) $\alpha r = 2$ のときに最高のパフォーマンスが得られることを観察した。  
+(ii)fine-tuningを行う場合、更新されるパラメータが多ければ多いほど良いというわけではない。  
+
+![figure13](images/figure13.png)  
+Fig. 13：$\alpha$ に対する、CIFAR-10-Cデータセットにおける $r$ の影響。
+
 In addition, We also illustrate the relationship between model accuracy and r for a given α on CIFAR-10-C dataset, as shown in Fig. 13.  
 The best performance is usually obtained when α r = 2.  
 This discovery provides experience for the widespread application of LoRA-C.  
+
+さらに、Fig. 13に示すように、CIFAR-10-Cデータセットにおける、与えられた $\alpha$ に対するモデル精度と $r$ の関係も示す。  
+通常、$\alpha r = 2$ のときに最高の性能が得られる。  
+この発見は、LoRA-Cを広く応用するための経験となる。  
 
 ## 5 CONCLUSION AND FUTURE WORK
 
